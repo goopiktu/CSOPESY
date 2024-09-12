@@ -3,39 +3,36 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 using namespace std;
 
+string green = "\033[32m";
+string reset = "\033[0m";
+string yellow = "\033[38;5;229m";
+bool running = true;
+
 void Initialize() {
-    cout << "initializing...\n";
+    cout << "initialize command recognized. Doing something.\n";
 }
 
 void Screen() {
-    cout << "screen...\n";
+    cout << "screen command recognized. Doing something.\n";
 }
 
 void SchedulerTest() {
-    cout << "scheduler-test...\n";
+    cout << "scheduler-test command recognized. Doing something.\n";
 }
 
 void SchedulerStop() {
-    cout << "scheduler-stop...\n";
+    cout << "scheduler-stop command recognized. Doing something.\n";
 }
 
 void ReportUtil() {
-    cout << "report-util...\n";
+    cout << "report-util command recognized. Doing something.\n";
 }
 
-int main()
-{
-    bool running = true;
-    string input = "";
-
-    string green = "\033[32m";
-    string reset = "\033[0m";
-    string yellow = "\033[38;5;229m";
-
-
-
+void Clear() {
+    system("CLS");
     cout << R"(
          ___________ ____  ____  _____________  __
         / ____/ ___// __ \/ __ \/ ____/ ___/\ \/ /
@@ -43,39 +40,66 @@ int main()
       / /___ ___/ / /_/ / ____/ /___ ___/ /  / /
       \____//____/\____/_/   /_____//____/  /_/                                                                                                                      
     )" << std::endl;
-    
+
     cout << green << "Hello, Welcome to CSOPESY commandline!\n" << reset;
     cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
+    cout << "report-util command recognized. Doing something.\n";
+}
+
+void Exit() {
+    cout << "exit command recognized. Doing something.\n";
+    running = false;
+}
+
+int main()
+{
+    
+    vector<string> inputBuffer;
+    string input;
+
+    Clear();
+    
     while (running) {
-        
+        inputBuffer.clear();
+
         cout << "Enter a command: ";
-        cin >> input;
 
+        //get input as a string vector delimited by ' '
+        while (cin >> input) {
+            inputBuffer.push_back(input);
 
-        if (input == "exit") {
-            running = false;
+            //break if command ended
+            if (cin.peek() == '\n')
+                break;
         }
-        else if (input == "initialize") {
+
+        string firstInput = inputBuffer[0];
+
+        //get the first as the command
+
+        if (firstInput == "exit") {
+            Exit();
+        }
+        else if (firstInput == "initialize") {
             Initialize();
         }
-        else if (input == "screen") {
+        else if (firstInput == "screen") {
             Screen();
         }
-        else if (input == "scheduler-test") {
+        else if (firstInput == "scheduler-test") {
             SchedulerTest();
         }
-        else if (input == "scheduler-stop") {
+        else if (firstInput == "scheduler-stop") {
             SchedulerStop();
         }
-        else if (input == "report-util") {
+        else if (firstInput == "report-util") {
             ReportUtil();
         }
-        else if (input == "clear") {
-            system("CLS");
-            cout << "cleared!\n";
+        else if (firstInput == "clear") {
+            Clear();
         }
         else {
-            cout << "unrecognized command please try again.\n";
+            cout << firstInput << " is not a unrecognized command. Please try again.\n";
         }
            
     }
