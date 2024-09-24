@@ -1,6 +1,6 @@
 // CSOPESY.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
-
+#include "ScreenFactory.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -16,7 +16,11 @@ void Initialize() {
 }
 
 void Screen() {
-    cout << "screen command recognized. Doing something.\n";
+    //cout << "screen command recognized. Doing something.\n";
+    ScreenFactory test("test");
+    cout << test.getName();
+    cout << test.getTime();
+    
 }
 
 void SchedulerTest() {
