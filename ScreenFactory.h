@@ -17,10 +17,14 @@ class ScreenFactory
 	private:
 		string name;
 		string timeCreated;
+		int lineOfInstruction;
+		int totalLineofInstruction;
 	
 	public:
 		ScreenFactory(string name) {
 			this->name = name;
+			this->lineOfInstruction = 0;
+			this->totalLineofInstruction = 0;
 			initializeTimeCreated();
 		}
 
@@ -34,6 +38,17 @@ class ScreenFactory
 			return name;
 		}
 
+	public:
+		int getLineOfInstruction() {
+			return lineOfInstruction;
+		}
+
+	public:
+		int getTotalLineofInstruction() {
+			return totalLineofInstruction;
+		}
+
+
 	private:
 		void initializeTimeCreated() {
 			time_t now = time(0);
@@ -44,7 +59,7 @@ class ScreenFactory
 
 			char output[50];
 
-			strftime(output, 50, "(%m/%d/%y %H:%M:%S %p)\n", &localTime);
+			strftime(output, 50, "(%m/%d/%y %H:%M:%S %p)", &localTime);
 
 			this->timeCreated = output;
 		}

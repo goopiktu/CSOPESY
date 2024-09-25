@@ -16,10 +16,8 @@ void Initialize() {
 }
 
 void Screen() {
-    //cout << "screen command recognized. Doing something.\n";
-    ScreenFactory test("test");
-    cout << test.getName();
-    cout << test.getTime();
+    cout << "screen command recognized. Doing something.\n";
+   
     
 }
 
