@@ -1,6 +1,7 @@
 // CSOPESY.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 #include "ScreenFactory.h"
+#include "ScreenManager.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -9,15 +10,39 @@ using namespace std;
 string green = "\033[32m";
 string reset = "\033[0m";
 string yellow = "\033[38;5;229m";
+ScreenManager screens;
+
 bool running = true;
 
 void Initialize() {
     cout << "initialize command recognized. Doing something.\n";
+
 }
 
-void Screen() {
-    cout << "screen command recognized. Doing something.\n";
-   
+void Screen(vector<string> inputBuffer) {
+    //cout << "screen command recognized. Doing something.\n";
+    if (inputBuffer.size() == 3) {
+        string action = inputBuffer[1]; 
+        string name = inputBuffer[2]; 
+
+        if (action == "-r") {
+            cout << "Restoring screen with name: " << name << "\n";
+        }
+        else if (action == "-s") {
+            cout << "Creating a new screen with name: " << name << "\n";
+            screens.addScreen(name);
+            screens.displayScreen(name);
+        }
+        else {
+            cout << "Unknown screen command action: " << action << "\n";
+        }
+        
+    }
+    else {
+        cout << "hello" << "\n";
+    }
+
+    
     
 }
 
@@ -86,7 +111,7 @@ int main()
             Initialize();
         }
         else if (firstInput == "screen") {
-            Screen();
+            Screen(inputBuffer);
         }
         else if (firstInput == "scheduler-test") {
             SchedulerTest();
@@ -99,6 +124,9 @@ int main()
         }
         else if (firstInput == "clear") {
             Clear();
+        }
+        else if (firstInput == "") {
+
         }
         else {
             cout << firstInput << " is not a unrecognized command. Please try again.\n";
