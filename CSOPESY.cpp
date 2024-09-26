@@ -27,24 +27,33 @@ void Screen(vector<string> inputBuffer) {
 
         if (action == "-r") {
             cout << "Restoring screen with name: " << name << "\n";
+
+
         }
         else if (action == "-s") {
             cout << "Creating a new screen with name: " << name << "\n";
-            screens.addScreen(name);
-            screens.displayScreen(name);
+            if(screens.sFind(name)) {
+                cout << "screen with the following name: [" << name << "] already exists.\n";
+            }
+            else {
+                screens.isInsideScreen(true);
+                screens.addScreen(name);
+                screens.displayScreen(name);
+                screens.loopScreen(name);
+            }
+          
+            
         }
         else {
             cout << "Unknown screen command action: " << action << "\n";
         }
-        
     }
     else {
-        cout << "hello" << "\n";
+        cout << "Invalid screen command. Please provide -r or -s and a name.\n";
     }
-
-    
-    
 }
+
+
 
 void SchedulerTest() {
     cout << "scheduler-test command recognized. Doing something.\n";

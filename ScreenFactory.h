@@ -6,14 +6,9 @@
 #include <time.h> 
 using namespace std;
 
-// TODO: Make a manager that controls the screens.
 
 class ScreenFactory
 {
-	// Based from IBM "Can define up to eight logical screens"
-	
-	// curreent line of instruction / total line fo instruction? idk what this is yet
-
 	private:
 		string name;
 		string timeCreated;
