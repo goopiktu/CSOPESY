@@ -19,15 +19,42 @@ void Initialize() {
 
 }
 
+void Clear() {
+    system("CLS");
+    cout << R"(
+         ___________ ____  ____  _____________  __
+        / ____/ ___// __ \/ __ \/ ____/ ___/\ \/ /
+       / /    \__ \/ / / / /_/ / __ / \__ \  \  /
+      / /___ ___/ / /_/ / ____/ /___ ___/ /  / /
+      \____//____/\____/_/   /_____//____/  /_/                                                                                                                      
+    )" << std::endl;
+
+    cout << green << "Hello, Welcome to CSOPESY commandline!\n" << reset;
+    cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
+}
+
 void Screen(vector<string> inputBuffer) {
     //cout << "screen command recognized. Doing something.\n";
-    if (inputBuffer.size() == 3) {
+    if (inputBuffer.size() == 2 && inputBuffer[1] == "-h") {
+        //helper function to see all the screens
+        screens.listScreens();
+    }
+    else if (inputBuffer.size() == 3) {
         string action = inputBuffer[1]; 
         string name = inputBuffer[2]; 
 
         if (action == "-r") {
             cout << "Restoring screen with name: " << name << "\n";
+            if (!screens.sFind(name)) {
+                cout << "screen with the following name: [" << name << "] does not exist.\n";
+            }
+            else {
+                screens.displayScreen(name);
+                screens.loopScreen(name);
 
+                //This stuff happens after exit
+                Clear();
+            }
 
         }
         else if (action == "-s") {
@@ -40,8 +67,10 @@ void Screen(vector<string> inputBuffer) {
                 screens.addScreen(name);
                 screens.displayScreen(name);
                 screens.loopScreen(name);
+
+                //This stuff happens after exit
+                Clear();
             }
-          
             
         }
         else {
@@ -67,20 +96,7 @@ void ReportUtil() {
     cout << "report-util command recognized. Doing something.\n";
 }
 
-void Clear() {
-    system("CLS");
-    cout << R"(
-         ___________ ____  ____  _____________  __
-        / ____/ ___// __ \/ __ \/ ____/ ___/\ \/ /
-       / /    \__ \/ / / / /_/ / __ / \__ \  \  /
-      / /___ ___/ / /_/ / ____/ /___ ___/ /  / /
-      \____//____/\____/_/   /_____//____/  /_/                                                                                                                      
-    )" << std::endl;
 
-    cout << green << "Hello, Welcome to CSOPESY commandline!\n" << reset;
-    cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
-    cout << "report-util command recognized. Doing something.\n";
-}
 
 void Exit() {
     cout << "exit command recognized. Doing something.\n";

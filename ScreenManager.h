@@ -20,6 +20,7 @@ class ScreenManager {
 	public:
 		void displayScreen(string name) {	
 			ScreenFactory* screen = screens[name];
+			system("CLS");
 			cout << "Screen name: " << screen->getName() << "\n";
 			cout << "Date created: " << screen->getTime() << "\n";
 			cout << "Line of instruction / Total line of instruction: " << screen->getLineOfInstruction() << "/" << screen->getTotalLineofInstruction() << "\n";
@@ -39,6 +40,14 @@ class ScreenManager {
 	public:
 		void isInsideScreen(bool screen) {
 			this->insideScreen = screen;
+		}
+
+	public:
+		void listScreens() {
+			cout << "The following screens currently exist: \n";
+			for (auto& s : screens) {
+				cout <<"- "<< s.second->getName() <<"\t\t\t"<< s.second->getTime() << "\n";
+			}
 		}
 
 
