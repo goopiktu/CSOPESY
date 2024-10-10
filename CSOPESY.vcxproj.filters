@@ -29,5 +29,11 @@
     <ClInclude Include="ScreenManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ProcessFactory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

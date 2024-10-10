@@ -35,7 +35,7 @@ void Clear() {
 
 void Screen(vector<string> inputBuffer) {
     //cout << "screen command recognized. Doing something.\n";
-    if (inputBuffer.size() == 2 && inputBuffer[1] == "-h") {
+    if (inputBuffer.size() == 2 && inputBuffer[1] == "-ls") {
         //helper function to see all the screens
         screens.listScreens();
     }
@@ -59,7 +59,7 @@ void Screen(vector<string> inputBuffer) {
         }
         else if (action == "-s") {
             cout << "Creating a new screen with name: " << name << "\n";
-            if(screens.sFind(name)) {
+            if (screens.sFind(name)) {
                 cout << "screen with the following name: [" << name << "] already exists.\n";
             }
             else {

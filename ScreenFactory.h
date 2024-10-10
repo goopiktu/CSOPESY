@@ -23,22 +23,18 @@ class ScreenFactory
 			initializeTimeCreated();
 		}
 
-	public:
 		string getTime() {
 			return timeCreated;
 		}
 
-	public:
 		string getName() {
 			return name;
 		}
 
-	public:
 		int getLineOfInstruction() {
 			return lineOfInstruction;
 		}
 
-	public:
 		int getTotalLineofInstruction() {
 			return totalLineofInstruction;
 		}

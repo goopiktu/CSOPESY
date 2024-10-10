@@ -17,7 +17,6 @@ class ScreenManager {
 			cout << "Screen '" << name << "' created." << endl;
 		}
 
-	public:
 		void displayScreen(string name) {	
 			ScreenFactory* screen = screens[name];
 			system("CLS");
@@ -26,7 +25,6 @@ class ScreenManager {
 			cout << "Line of instruction / Total line of instruction: " << screen->getLineOfInstruction() << "/" << screen->getTotalLineofInstruction() << "\n";
 		}
 
-	public:
 		bool sFind(string name) {
 			auto it = screens.find(name);
 			if (it != screens.end()) {
@@ -37,12 +35,10 @@ class ScreenManager {
 			}
 		}
 
-	public:
 		void isInsideScreen(bool screen) {
 			this->insideScreen = screen;
 		}
 
-	public:
 		void listScreens() {
 			cout << "The following screens currently exist: \n";
 			for (auto& s : screens) {
@@ -50,8 +46,6 @@ class ScreenManager {
 			}
 		}
 
-
-	public:
 		void loopScreen(string name) {
 			ScreenFactory* screen = screens[name];
 			vector<string> inputBuffer;
@@ -75,7 +69,11 @@ class ScreenManager {
 					return;
 				}
 				else {
-					cout << "echo: " << firstInput << "\n";
+					cout << "echo: ";
+					for (const string& word : inputBuffer) {
+						cout << word << " ";
+					}
+					cout << "\n";
 				}
 
 			}
