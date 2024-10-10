@@ -131,6 +131,7 @@
     <ClCompile Include="ScreenFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Core.h" />
     <ClInclude Include="ProcessFactory.h" />
     <ClInclude Include="ProcessManager.h" />
     <ClInclude Include="ScreenFactory.h" />

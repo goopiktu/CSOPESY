@@ -1,46 +1,61 @@
-#pragma once
 #include <queue>
-#include "processFactory.h"
-#include <iostream>
-using namespace std;
+#include <vector>
+#include "core.h"
+
 class ProcessManager {
 private:
-    queue<ProcessFactory*> processQueue;
+    std::queue<ProcessFactory*> processQueue; // Queue of processes
+    std::vector<Core*> cores;                 // Vector of cores (threads)
 
 public:
-    // Add process to the queue
+    // Constructor to initialize the cores
+    ProcessManager(int numCores = 4) {
+        // Create the specified number of cores
+        for (int i = 0; i < numCores; ++i) {
+            cores.push_back(new Core(i));
+        }
+    }
+
+    // Destructor to clean up dynamically allocated cores
+    ~ProcessManager() {
+        for (Core* core : cores) {
+            delete core;
+        }
+    }
+
+    // Method to add a process to the queue
     void addProcess(ProcessFactory* process) {
         processQueue.push(process);
-        cout << "Process '" << process->getName() << "' added to the queue." << endl;
+        std::cout << "Process '" << process->getName() << "' added to the queue." << std::endl;
     }
 
-    // Run the first process in the queue
-    void runProcess() {
-        if (!processQueue.empty()) {
-            ProcessFactory* currentProcess = processQueue.front();
-            currentProcess->setStatus(RUNNING);
-
-            // Simulate process execution
-            while (currentProcess->getLineOfInstruction() < currentProcess->getTotalLineOfInstruction()) {
-                currentProcess->setLineOfInstruction(currentProcess->getLineOfInstruction() + 1);
-                cout << "Executing process: " << currentProcess->getName()
-                    << " (" << currentProcess->getLineOfInstruction()
-                    << "/" << currentProcess->getTotalLineOfInstruction() << ")" << endl;
+    // Dispatch processes to available cores
+    void dispatchProcesses() {
+        // Loop while there are processes in the queue or any core is still running
+        while (!processQueue.empty() || anyCoreRunning()) {
+            for (Core* core : cores) {
+                // If the core is idle and there are processes in the queue, assign a process to the core
+                if (!core->isRunning() && !processQueue.empty()) {
+                    ProcessFactory* process = processQueue.front();
+                    processQueue.pop();
+                    core->start(process); // Assign process to core and start execution
+                }
             }
-
-            currentProcess->setStatus(TERMINATED);
-            cout << "Process " << currentProcess->getName() << " completed." << endl;
-
-            // Remove the process from the queue
-            processQueue.pop();
         }
-        else {
-            cout << "No processes to run." << endl;
+
+        // Ensure all threads finish their work by joining them
+        for (Core* core : cores) {
+            core->join();
         }
     }
 
-    // Check if there are processes in the queue
-    bool hasProcesses() {
-        return !processQueue.empty();
+    // Check if any core is still running a process
+    bool anyCoreRunning() const {
+        for (const Core* core : cores) {
+            if (core->isRunning()) {
+                return true;
+            }
+        }
+        return false;
     }
 };
