@@ -1,87 +1,46 @@
 #pragma once
 #include <queue>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <unordered_map>
 #include "processFactory.h"
-class ScreenManager {
-	// might have to put limiter on how many screens are allowed to be in screens
+#include <iostream>
+using namespace std;
+class ProcessManager {
 private:
-	queue<ProcessFactory*> processess;
-	//unordered_map<string, ScreenFactory*> screens;
-	//bool insideScreen;
+    queue<ProcessFactory*> processQueue;
 
 public:
-	void addScreen(string name) {
-		ScreenFactory* screen = new ScreenFactory(name);
-		screens[name] = screen;
-		cout << "Screen '" << name << "' created." << endl;
-	}
+    // Add process to the queue
+    void addProcess(ProcessFactory* process) {
+        processQueue.push(process);
+        cout << "Process '" << process->getName() << "' added to the queue." << endl;
+    }
 
-	void displayScreen(string name) {
-		ScreenFactory* screen = screens[name];
-		system("CLS");
-		cout << "Screen name: " << screen->getName() << "\n";
-		cout << "Date created: " << screen->getTime() << "\n";
-		cout << "Line of instruction / Total line of instruction: " << screen->getLineOfInstruction() << "/" << screen->getTotalLineofInstruction() << "\n";
-	}
+    // Run the first process in the queue
+    void runProcess() {
+        if (!processQueue.empty()) {
+            ProcessFactory* currentProcess = processQueue.front();
+            currentProcess->setStatus(RUNNING);
 
-	bool sFind(string name) {
-		auto it = screens.find(name);
-		if (it != screens.end()) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
+            // Simulate process execution
+            while (currentProcess->getLineOfInstruction() < currentProcess->getTotalLineOfInstruction()) {
+                currentProcess->setLineOfInstruction(currentProcess->getLineOfInstruction() + 1);
+                cout << "Executing process: " << currentProcess->getName()
+                    << " (" << currentProcess->getLineOfInstruction()
+                    << "/" << currentProcess->getTotalLineOfInstruction() << ")" << endl;
+            }
 
-	void isInsideScreen(bool screen) {
-		this->insideScreen = screen;
-	}
+            currentProcess->setStatus(TERMINATED);
+            cout << "Process " << currentProcess->getName() << " completed." << endl;
 
-	void listScreens() {
-		cout << "The following screens currently exist: \n";
-		for (auto& s : screens) {
-			cout << "- " << s.second->getName() << "\t\t\t" << s.second->getTime() << "\n";
-		}
-	}
+            // Remove the process from the queue
+            processQueue.pop();
+        }
+        else {
+            cout << "No processes to run." << endl;
+        }
+    }
 
-	void loopScreen(string name) {
-		ScreenFactory* screen = screens[name];
-		vector<string> inputBuffer;
-		string input;
-
-
-		while (insideScreen) {
-			inputBuffer.clear();
-
-			cout << "In screen [" << screen->getName() << "] Enter a command: ";
-
-			while (cin >> input) {
-				inputBuffer.push_back(input);
-				if (cin.peek() == '\n')
-					break;
-			}
-
-			string firstInput = inputBuffer[0];
-
-			if (firstInput == "exit") {
-				return;
-			}
-			else {
-				cout << "echo: ";
-				for (const string& word : inputBuffer) {
-					cout << word << " ";
-				}
-				cout << "\n";
-			}
-
-		}
-
-	}
-
-
-
+    // Check if there are processes in the queue
+    bool hasProcesses() {
+        return !processQueue.empty();
+    }
 };
