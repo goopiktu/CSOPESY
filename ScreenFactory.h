@@ -4,6 +4,8 @@
 #include <iostream>
 #include <stdlib.h> 
 #include <time.h> 
+#include <fstream>
+
 using namespace std;
 
 enum Status {
@@ -21,6 +23,8 @@ class ScreenFactory
 		int lineOfInstruction;
 		int totalLineofInstruction;
 		Status status;
+
+		ofstream file;
 	
 	public:
 		ScreenFactory(string name, int total_instruction) {
@@ -28,6 +32,9 @@ class ScreenFactory
 			this->lineOfInstruction = 0;
 			this->totalLineofInstruction = total_instruction;
 			this->status = READY;
+			this->file = ofstream("output/" + name + ".txt");
+
+			file << "Process name: " << name << "\nLogs:\n";
 			initializeTimeCreated();
 		}
 
@@ -67,10 +74,13 @@ class ScreenFactory
 
 					strftime(output, 50, "(%m/%d/%y %H:%M:%S %p)", &localTime);
 
-					//cout << output << " Core:" << core << " \"Hello world from " << name << "!\"\n";
+					file << output << " Core:" << core << " \"Hello world from " << name << "!\"\n";
 					lineOfInstruction+=1;
 				}
-				else status = TERMINATED;
+				else {
+					status = TERMINATED;
+					file.close();
+				}
 			}
 		}
 
