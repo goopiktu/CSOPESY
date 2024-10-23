@@ -13,7 +13,6 @@ class ScreenManager {
 		unordered_map<string, ScreenFactory*> screens;
 
 		std::vector <string> running_queue;
-		std::vector <thread> core_threads;
 		int cores;
 		bool insideScreen;
 
@@ -32,19 +31,16 @@ class ScreenManager {
 			}
 
 			std::thread manager(&ScreenManager::managerJob, this);
-
-			/*--- Initialize Cores ---*/
-			for (int i = 0; i < cores; i++) {
-				core_threads.push_back(std::thread(&ScreenManager::coreJob, this, i));
-			};
-
-
-			/*--- Execute Cores ---*/
+			std::thread core_1(&ScreenManager::coreJob, this, 0);
+			std::thread core_2(&ScreenManager::coreJob, this, 1);
+			std::thread core_3(&ScreenManager::coreJob, this, 2);
+			std::thread core_4(&ScreenManager::coreJob, this, 3);
+			
 			manager.join();
-
-			for (int i = 0; i < cores; i++) {
-				core_threads[i].join();
-			};
+			core_1.join();
+			core_2.join();
+			core_3.join();
+			core_4.join();
 		}
 
 		void addScreen(string name, int instruction_count) {
