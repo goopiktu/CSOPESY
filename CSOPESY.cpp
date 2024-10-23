@@ -5,14 +5,21 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <conio.h>
+#include <sstream>
+
 using namespace std;
 
 string green = "\033[32m";
 string reset = "\033[0m";
 string yellow = "\033[38;5;229m";
-ScreenManager screens;
 
 bool running = true;
+
+void mainThread();
+
+std::thread main_worker(mainThread);
+ScreenManager screens(4); //initialize screenmanager with 4 cores
 
 void Initialize() {
     cout << "initialize command recognized. Doing something.\n";
@@ -64,12 +71,12 @@ void Screen(vector<string> inputBuffer) {
             }
             else {
                 screens.isInsideScreen(true);
-                screens.addScreen(name);
-                screens.displayScreen(name);
-                screens.loopScreen(name);
+                screens.addScreen(name, 100);
+                //screens.displayScreen(name);
+                //screens.loopScreen(name);
 
                 //This stuff happens after exit
-                Clear();
+                //Clear();
             }
             
         }
@@ -99,31 +106,78 @@ void ReportUtil() {
 
 
 void Exit() {
+    screens.shutdown();
     cout << "exit command recognized. Doing something.\n";
     running = false;
 }
 
-int main()
-{
-    
+vector<string> split_sentence(string sen) {
+
+    // Create a stringstream object
+    stringstream ss(sen);
+
+    // Variable to hold each word
+    string word;
+
+    // Vector to store the words
+    vector<string> words;
+
+    // Extract words from the sentence
+    while (ss >> word) {
+
+        // Add the word to the vector
+        words.push_back(word);
+    }
+
+    return words;
+}
+
+
+void mainThread() {
+
+    std::string inputBufferB;
     vector<string> inputBuffer;
     string input;
-
+    bool input_done = false;
     Clear();
-    
+
     while (running) {
         inputBuffer.clear();
+        inputBufferB.clear();
+        input_done = false;
 
         cout << "Enter a command: ";
 
-        //get input as a string vector delimited by ' '
-        while (cin >> input) {
-            inputBuffer.push_back(input);
+        while (!input_done) {
+            if (_kbhit()) {
+                char ch = _getch();
 
-            //break if command ended
-            if (cin.peek() == '\n')
-                break;
+                switch (ch) {
+                case 8: //bs
+                    if (inputBufferB.size() > 0) {
+                        inputBufferB.pop_back();
+                        cout << char(8) << " " << char(8);
+                    }
+                    break;
+                case 13: //enter
+                    cout << "\n";
+                    input_done = true;
+                    break;
+                default:
+                    if (ch >= 32 && ch <= 126) {
+                        inputBufferB.push_back(ch);
+                        cout << ch;
+                    }
+                    
+                    break;
+                }
+                
+            }
         }
+
+        inputBuffer = split_sentence(inputBufferB);
+
+        if (inputBuffer.size() <= 0) continue; //nothing was entered.
 
         string firstInput = inputBuffer[0];
 
@@ -156,8 +210,16 @@ int main()
         else {
             cout << firstInput << " is not a unrecognized command. Please try again.\n";
         }
-           
+
     }
+}
+
+
+
+
+int main()
+{
+    main_worker.join();
 }
 
 
