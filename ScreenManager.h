@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
+#include <queue> 
 #include "ScreenFactory.h"
 #include <thread>
 #include <Windows.h>
@@ -11,6 +13,8 @@ class ScreenManager {
 	// might have to put limiter on how many screens are allowed to be in screens
 	private: 
 		unordered_map<string, ScreenFactory*> screens;
+
+		queue<ScreenFactory*> ready_queue;
 
 		std::vector <string> running_queue;
 		std::vector <thread> core_threads;
@@ -32,10 +36,10 @@ class ScreenManager {
 			}
 
 			std::thread manager(&ScreenManager::managerJob, this);
-
+			  
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
-				core_threads.push_back(std::thread(&ScreenManager::coreJob, this, i));
+				core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i));
 			};
 
 
@@ -50,6 +54,7 @@ class ScreenManager {
 		void addScreen(string name, int instruction_count) {
 			ScreenFactory* screen = new ScreenFactory(name, instruction_count);
 			screens[name] = screen;
+			ready_queue.push(screen);
 			cout << "Screen '" << name << "' created." << endl;
 		}
 
@@ -113,17 +118,59 @@ class ScreenManager {
 			
 		}
 
+		void coreJob_RR(int i) {
+			int time_slice = 15;
+			int counter = 0;
+			
+			while (running) {
+				string screen_name = running_queue[i]; 
+
+				// Key is not present
+				if (screens.find(screen_name) == screens.end()) continue;
+
+				// Process is done
+				if (screens[screen_name]->getStatus() == TERMINATED) {
+					counter = 0;
+					continue;
+				}
+
+				// Current process has reached allotted time slice
+				if (counter == time_slice) {
+					screens[screen_name]->setStatus(READY);
+					counter = 0;
+					running_queue[i] = "";
+					ready_queue.push(screens[screen_name]);
+					continue;
+				}
+
+				screens[screen_name]->print(i);
+				counter++;
+				Sleep(1000);
+			}
+		}
+
 		string findFirst() {
 			//return the first 
 			string next_up = "";
 
-			for (auto& s : screens) {
-				if (s.second->getStatus() == READY) {
-					//cout << s.second->getStatus();
-					next_up = s.second->getName();
-					break;
-				}
+			/*--- findFirst using ready queue structure ---*/
+			if (ready_queue.empty()) {
+				next_up = "";
+				return next_up;
 			}
+
+			ScreenFactory* process = ready_queue.front();
+			ready_queue.pop();
+			next_up = process->getName();
+
+			/*--- Original findFirst implementation ---*/
+			//for (auto& s : screens) {
+			//	if (s.second->getStatus() == READY) {
+			//		//cout << s.second->getStatus();
+			//		next_up = s.second->getName();
+			//		break;
+			//	}
+			//}
 
 			return next_up;
 		}
@@ -145,7 +192,7 @@ class ScreenManager {
 					}
 					
 				}
-
+				std::cout << "RQ: " << read_queue
 				Sleep(1000/60);
 			}
 		}
