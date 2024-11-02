@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <mutex>
+#include <atomic>
 #include <queue> 
 #include "ScreenFactory.h"
 #include <thread>
@@ -21,9 +22,14 @@ class ScreenManager {
 		int cores;
 		bool insideScreen;
 
-		bool running = true;
+		atomic<bool> running = true;
 
 		int cpu_cycles = 0;
+
+		// MUTEX LOCKS
+		std::mutex screens_mutex;
+		std::mutex ready_queue_mutex;
+		std::mutex running_queue_mutex; 
 
 	public:
 		void shutdown() {
@@ -41,7 +47,7 @@ class ScreenManager {
 			  
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
-				core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i));
+				core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i)); // TODO: Make the cores run the appropriate scheduler based on user input
 			};
 
 
@@ -55,8 +61,14 @@ class ScreenManager {
 
 		void addScreen(string name, int min_ins, int max_ins) {
 			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins);
-			screens[name] = screen;
-			ready_queue.push(screen);
+			{
+				std::lock_guard<std::mutex> lock(screens_mutex);
+				screens[name] = screen;
+			}
+			{
+				std::lock_guard<std::mutex> lock(ready_queue_mutex);
+				ready_queue.push(screen);
+			}
 			//cout << "Screen '" << name << "' created." << endl;
 		}
 
@@ -125,35 +137,65 @@ class ScreenManager {
 			int counter = 0;
 			
 			while (running) {
-				string screen_name = running_queue[i]; 
+				std::string screen_name;
+				{
+					std::lock_guard<std::mutex> lock(running_queue_mutex);
+					screen_name = running_queue[i]; 
+				}
 
-				// Key is not present
-				if (screens.find(screen_name) == screens.end()) continue;
+				{
+					// Key is not present
+					std::lock_guard<std::mutex> lock(screens_mutex);
+					if (screens.find(screen_name) == screens.end()) continue;
 
-				// Process is done
-				if (screens[screen_name]->getStatus() == TERMINATED) {
-					counter = 0;
-					continue;
+					// Process is done
+					/*std::lock_guard<std::mutex> lock(screens_mutex);*/
+					if (screens[screen_name]->getStatus() == TERMINATED) {
+						counter = 0;
+						continue;
+					}
 				}
 
 				// Current process has reached allotted time slice
 				if (counter == time_slice) {
-					screens[screen_name]->setStatus(READY);
+
+					{ // If no current process in ready_queue, continue process
+						std::string next_up = findFirst();
+						if (next_up == "") {
+							counter = 0;
+							continue;
+						}
+					}
+					
+					{	// Change status to ready 
+						std::lock_guard<std::mutex> lock(screens_mutex);
+						screens[screen_name]->setStatus(READY);
+					}
 					counter = 0;
-					running_queue[i] = "";
-					ready_queue.push(screens[screen_name]);
+
+					{	// Clear current core process
+						std::lock_guard<std::mutex> lock(running_queue_mutex);
+						running_queue[i] = "";
+					}
+
+					{	// Requeue process
+						std::lock_guard<std::mutex> lock(ready_queue_mutex);
+						ready_queue.push(screens[screen_name]);
+					}
 					continue;
-				}
+				} // ENDIF
 
 				screens[screen_name]->print(i);
 				counter++;
-				Sleep(1000);
+				Sleep(1000/60);
 			}
 		}
 
 		string findFirst() {
 			//return the first 
 			string next_up = "";
+
+			std::lock_guard<std::mutex> lock(ready_queue_mutex);
 
 			/*--- findFirst using ready queue structure ---*/
 			if (ready_queue.empty()) {
@@ -181,21 +223,30 @@ class ScreenManager {
 			while (running) {
 				
 				for (int i = 0; i < cores; i++) {
-					if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() == TERMINATED) {
-						//screen doesnt exist yet or is terminated 
+					std::string next_up;
+					{
+						// Lock the mutexes for screens and running_queue
+						std::unique_lock<std::mutex> lock_screens(screens_mutex, std::defer_lock);
+						std::unique_lock<std::mutex> lock_running(running_queue_mutex, std::defer_lock);
+						std::lock(lock_screens, lock_running); // Lock both mutexes
+						if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() == TERMINATED) {
+							//screen doesnt exist yet or is terminated 
 
-						//find if smthn is resdy
-						string next_up = findFirst();
-						if (next_up == "") continue;
+							{
+								// find if smthn is ready
+								next_up = findFirst();
+							}
+							if (next_up == "") continue;
 
-						screens[next_up]->setStatus(RUNNING);
-						running_queue[i] = next_up;
-						continue;
-					}
-					
-				}
-			/*	std::cout << "RQ: " << ready_queue.size();
-				Sleep(1000/60);*/
+							screens[next_up]->setStatus(RUNNING);
+							running_queue[i] = next_up;
+							continue;
+						} // ENDIF
+					} //END MUTEX LOCK
+				}// ENDFORLOOP
+
+			/*	std::cout << "RQ: " << ready_queue.size(); */
+				Sleep(1000/60);
 			}
 		}
 

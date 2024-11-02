@@ -7,6 +7,8 @@
 #include <vector>
 #include <conio.h>
 #include <sstream>
+
+// Scheduler Parameters
 struct Config {
     int num_cpu;
     std::string scheduler; 
