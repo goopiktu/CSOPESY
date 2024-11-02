@@ -27,10 +27,13 @@ class ScreenFactory
 		ofstream file;
 	
 	public:
-		ScreenFactory(string name, int total_instruction) {
+		ScreenFactory(string name, int min_ins, int max_ins) {
 			this->name = name;
 			this->lineOfInstruction = 0;
-			this->totalLineofInstruction = total_instruction;
+
+			setTotalLineofInstruction(min_ins, max_ins);
+			//this->totalLineofInstruction = setTotalLineofInstruction(min_ins, max_ins);
+			//this->totalLineofInstruction = total_instruction;
 			this->status = READY;
 			this->file = ofstream("output/" + name + ".txt");
 
@@ -82,6 +85,12 @@ class ScreenFactory
 					file.close();
 				}
 			}
+		}
+
+		void setTotalLineofInstruction(int min_ins, int max_ins) {
+			int range = max_ins - min_ins + 1;
+			int num = rand() % range + min_ins;
+			this->totalLineofInstruction = num;
 		}
 
 

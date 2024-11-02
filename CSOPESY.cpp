@@ -7,23 +7,97 @@
 #include <vector>
 #include <conio.h>
 #include <sstream>
-
-using namespace std;
+struct Config {
+    int num_cpu;
+    std::string scheduler; 
+    int quantum_cycles;
+    int batch_process_freq;
+    int min_ins;
+    int max_ins;
+    int delay_per_exec;
+};
+Config config;
 
 string green = "\033[32m";
 string reset = "\033[0m";
 string yellow = "\033[38;5;229m";
 
+int cpu_cycles = 0;
+
 bool running = true;
+bool initialized = false;
 
 void mainThread();
 
 std::thread main_worker(mainThread);
+std::thread scheduler_test_thread;
 ScreenManager screens(4); //initialize screenmanager with 4 cores
 
-void Initialize() {
-    cout << "initialize command recognized. Doing something.\n";
 
+atomic<bool> making_process(false);
+
+void Initialize() {
+    std::cout << "initialize command recognized. Loading configuration.\n";
+
+    std::ifstream MyReadFile("config.txt");
+    if (!MyReadFile) {
+        std::cerr << "Error: Could not open config.txt file.\n";
+        return;
+    }
+
+    std::string line;
+    while (std::getline(MyReadFile, line)) {
+        std::istringstream iss(line);
+        std::string key;
+        int value;
+
+        iss >> key;
+
+        if (key == "num-cpu") {
+            iss >> value;
+            config.num_cpu = value;
+        }
+        else if (key == "scheduler") {
+            std::getline(iss, config.scheduler);
+            config.scheduler.erase(0, config.scheduler.find_first_not_of(" \t\""));
+            config.scheduler.erase(config.scheduler.find_last_not_of(" \t\"") + 1); 
+        }
+        else if (key == "quantum-cycles") {
+            iss >> value;
+            config.quantum_cycles = value;
+        }
+        else if (key == "batch-process-freq") {
+            iss >> value;
+            config.batch_process_freq = value;
+        }
+        else if (key == "min-ins") {
+            iss >> value;
+            config.min_ins = value;
+        }
+        else if (key == "max-ins") {
+            iss >> value;
+            config.max_ins = value;
+        }
+        else if (key == "delay-per-exec") {
+            iss >> value;
+            config.delay_per_exec = value;
+        }
+        else {
+            std::cout << "Unknown config parameter: " << key << "\n";
+        }
+    }
+
+    MyReadFile.close();
+
+    // Display loaded configuration
+    std::cout << "Configuration Loaded:\n";
+    std::cout << "num-cpu: " << config.num_cpu << "\n";
+    std::cout << "scheduler: " << config.scheduler << "\n";
+    std::cout << "quantum-cycles: " << config.quantum_cycles << "\n";
+    std::cout << "batch-process-freq: " << config.batch_process_freq << "\n";
+    std::cout << "min-ins: " << config.min_ins << "\n";
+    std::cout << "max-ins: " << config.max_ins << "\n";
+    std::cout << "delay-per-exec: " << config.delay_per_exec << "\n";
 }
 
 void Clear() {
@@ -71,7 +145,7 @@ void Screen(vector<string> inputBuffer) {
             }
             else {
                 screens.isInsideScreen(true);
-                screens.addScreen(name, 100);
+                screens.addScreen(name, config.min_ins, config.max_ins);
                 //screens.displayScreen(name);
                 //screens.loopScreen(name);
 
@@ -91,12 +165,41 @@ void Screen(vector<string> inputBuffer) {
 
 
 
-void SchedulerTest() {
-    cout << "scheduler-test command recognized. Doing something.\n";
+void SchedulerTest(int batch_process_freq, int min_ins, int max_ins) {
+    std::cout << "scheduler-test command recognized. Starting process generation.\n";
+
+    // Check if the process generation is already running
+    if (!making_process.load()) {
+        making_process.store(true); // Set the flag to true to indicate that process generation is active
+
+        // Create a single thread for generating processes
+        scheduler_test_thread = std::thread([=]() {
+            int process_count = 0; // Count of processes generated
+
+            while (making_process.load()) { // Loop while process generation is active
+                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq)); // Wait for the specified frequency
+
+                // Create a unique name for each process
+                std::string process_name = "Process_" + std::to_string(process_count++);
+                screens.addScreen(process_name, min_ins, max_ins); // Add new process to the ScreenManager
+                //std::cout << "Generated process: " << process_name << "\n"; // Log the generated process
+            }
+            });
+    }
+    else {
+        std::cout << "Scheduler is already running.\n"; // Inform if process generation is already active
+    }
 }
 
 void SchedulerStop() {
-    cout << "scheduler-stop command recognized. Doing something.\n";
+    std::cout << "scheduler-stop command recognized. Stopping process generation.\n";
+
+    // Signal the thread to stop and join it
+    making_process.store(false); // Set the flag to false to stop process generation
+
+    if (scheduler_test_thread.joinable()) {
+        scheduler_test_thread.join(); // Wait for the thread to finish
+    }
 }
 
 void ReportUtil() {
@@ -147,7 +250,7 @@ void mainThread() {
         input_done = false;
 
         cout << "Enter a command: ";
-
+        
         while (!input_done) {
             if (_kbhit()) {
                 char ch = _getch();
@@ -188,29 +291,33 @@ void mainThread() {
         }
         else if (firstInput == "initialize") {
             Initialize();
+            initialized = true; 
         }
-        else if (firstInput == "screen") {
-            Screen(inputBuffer);
-        }
-        else if (firstInput == "scheduler-test") {
-            SchedulerTest();
-        }
-        else if (firstInput == "scheduler-stop") {
-            SchedulerStop();
-        }
-        else if (firstInput == "report-util") {
-            ReportUtil();
-        }
-        else if (firstInput == "clear") {
-            Clear();
-        }
-        else if (firstInput == "") {
-
+        else if (initialized) {  
+            if (firstInput == "screen") {
+                Screen(inputBuffer);
+            }
+            else if (firstInput == "scheduler-test") {
+                SchedulerTest(config.batch_process_freq, config.min_ins, config.max_ins);
+            }
+            else if (firstInput == "scheduler-stop") {
+                SchedulerStop();
+            }
+            else if (firstInput == "report-util") {
+                ReportUtil();
+            }
+            else if (firstInput == "clear") {
+                Clear();
+            }
+            else {
+                cout << firstInput << " is not a recognized command. Please try again.\n";
+            }
         }
         else {
-            cout << firstInput << " is not a unrecognized command. Please try again.\n";
+            cout << "You must initialize first.\n";  
         }
 
+        
     }
 }
 

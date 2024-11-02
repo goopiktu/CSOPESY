@@ -10,7 +10,7 @@
 #include <Windows.h>
 
 class ScreenManager {
-	// might have to put limiter on how many screens are allowed to be in screens
+
 	private: 
 		unordered_map<string, ScreenFactory*> screens;
 
@@ -22,6 +22,8 @@ class ScreenManager {
 		bool insideScreen;
 
 		bool running = true;
+
+		int cpu_cycles = 0;
 
 	public:
 		void shutdown() {
@@ -51,11 +53,11 @@ class ScreenManager {
 			};
 		}
 
-		void addScreen(string name, int instruction_count) {
-			ScreenFactory* screen = new ScreenFactory(name, instruction_count);
+		void addScreen(string name, int min_ins, int max_ins) {
+			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins);
 			screens[name] = screen;
 			ready_queue.push(screen);
-			cout << "Screen '" << name << "' created." << endl;
+			//cout << "Screen '" << name << "' created." << endl;
 		}
 
 		void displayScreen(string name) {	
@@ -192,8 +194,8 @@ class ScreenManager {
 					}
 					
 				}
-				std::cout << "RQ: " << read_queue
-				Sleep(1000/60);
+			/*	std::cout << "RQ: " << ready_queue.size();
+				Sleep(1000/60);*/
 			}
 		}
 
