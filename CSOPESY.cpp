@@ -7,6 +7,7 @@
 #include <vector>
 #include <conio.h>
 #include <sstream>
+#include <thread>
 
 // Scheduler Parameters
 struct Config {
@@ -30,9 +31,11 @@ bool running = true;
 bool initialized = false;
 
 void mainThread();
+void cpuCycle();
 
 std::thread main_worker(mainThread);
 std::thread scheduler_test_thread;
+std::thread cpu_cycle(cpuCycle);
 ScreenManager screens(4); //initialize screenmanager with 4 cores
 
 
@@ -114,6 +117,7 @@ void Clear() {
 
     cout << green << "Hello, Welcome to CSOPESY commandline!\n" << reset;
     cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
+    //cout << cpu_cycles << reset;
 }
 
 void Screen(vector<string> inputBuffer) {
@@ -252,7 +256,7 @@ void mainThread() {
         input_done = false;
 
         cout << "Enter a command: ";
-        
+        cout << cpu_cycles << reset;
         while (!input_done) {
             if (_kbhit()) {
                 char ch = _getch();
@@ -323,11 +327,17 @@ void mainThread() {
     }
 }
 
-
+void cpuCycle() {
+    while (running) { 
+        cpu_cycles++;  
+        Sleep(config.delay_per_exec);
+    }
+}
 
 
 int main()
 {
+    cpu_cycle.join();
     main_worker.join();
 }
 
