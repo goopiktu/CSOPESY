@@ -17,7 +17,7 @@ std::string yellow = "\033[38;5;229m";
 int cpu_cycles = 0;
 bool running = true;
 std::atomic<bool> initialized(false);  // Track initialization status
-
+Config* config = Config::getInstance();
 void mainThread();
 void cpuCycle();
 
@@ -186,7 +186,7 @@ void mainThread() {
                 Screen(inputBuffer);
             }
             else if (firstInput == "scheduler-test") {
-                //SchedulerTest(config->batch_process_freq, config->min_ins, config->max_ins);
+                SchedulerTest(config->getBatchProcessFreq(), config->getMinIns(), config->getMaxIns());
             }
             else if (firstInput == "scheduler-stop") {
                 SchedulerStop();
@@ -208,7 +208,7 @@ void cpuCycle() {
     Config* config = Config::getInstance(); // Access singleton instance
     while (running) {
         cpu_cycles++;
-        //std::this_thread::sleep_for(std::chrono::milliseconds(config->delay_per_exec));
+        std::this_thread::sleep_for(std::chrono::milliseconds(config->getDelayPerExec()));
     }
 }
 

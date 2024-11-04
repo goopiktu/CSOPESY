@@ -1,10 +1,10 @@
-// Config.h
 #pragma once
 #include <string>
 #include <map>
 #include <stdexcept>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 class ConfigException : public std::runtime_error {
 public:
@@ -23,7 +23,7 @@ private:
     bool initialized = false;
 
     static Config* instancePtr;
-    Config() {}  
+    Config() {}
 
 public:
     static Config* getInstance() {
@@ -36,13 +36,16 @@ public:
     void loadConfig(const std::string& filename);
     void validateParameters();
     bool isInitialized() const { return initialized; }
+    int getNumCPU() const { return numCPU; }
+    const std::string& getSchedulerType() const { return scheduler_type; }
+    uint32_t getQuantumCycles() const { return quantum_cycles; }
+    uint32_t getBatchProcessFreq() const { return batch_process_freq; }
+    uint32_t getMinIns() const { return min_ins; }
+    uint32_t getMaxIns() const { return max_ins; }
+    uint32_t getDelayPerExec() const { return delay_per_exec; }
 };
 
 Config* Config::instancePtr = nullptr;
-
-// Config.cpp
-#include "Config.h"
-#include <iostream>
 
 void Config::loadConfig(const std::string& filename) {
     std::ifstream file(filename);
