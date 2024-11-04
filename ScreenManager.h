@@ -99,6 +99,17 @@ class ScreenManager {
 		}
 
 		void listScreens() {
+			int cpu_usage_count = 0;
+			for (int i = 0; i < cores; i++) {
+				if (screens.find(running_queue[i]) == screens.end()) {
+					continue;
+				}
+
+				cpu_usage_count++;
+			}
+
+			cout << "CPU: " << cpu_usage_count * 100 / cores  <<"%"<< endl;
+
 			cout << "--------------------------------------\n";
 			cout << "Running processes: \n";
 
@@ -127,11 +138,52 @@ class ScreenManager {
 			cout << "--------------------------------------\n";
 
 
-			for (auto& s : screens) {
-				cout << "Process Name: " << s.second->getName() << ", Status: " << s.second->getStatus() << endl;
+		}
+
+		void report_util() {
+			ofstream file = ofstream("report.txt");
+
+			int cpu_usage_count = 0;
+			for (int i = 0; i < cores; i++) {
+				if (screens.find(running_queue[i]) == screens.end()) {
+					continue;
+				}
+
+				cpu_usage_count++;
 			}
 
-			cout << "RQ: " << ready_queue.size() << endl;
+			file << "CPU: " << cpu_usage_count * 100 / cores << "%" << endl;
+
+			file << "--------------------------------------\n";
+			file << "Running processes: \n";
+
+			for (int i = 0; i < cores; i++) {
+				if (screens.find(running_queue[i]) == screens.end()) {
+					continue;
+				}
+
+				ScreenFactory* s = screens[running_queue[i]];
+				if (s->getStatus() == RUNNING) {
+					file << s->getName() << "\t" << s->getTime() << "\tCore:" << i << "\t" << s->getLineOfInstruction() << " / " << s->getTotalLineofInstruction() << "\n";
+
+				}
+			}
+
+			file << "\nFinished processes: \n";
+			for (auto& s : screens) {
+				if (s.second->getStatus() == TERMINATED) {
+					file << s.second->getName() << "\t" << s.second->getTime() << "\tFinished\t" << s.second->getLineOfInstruction() << " / " << s.second->getTotalLineofInstruction() << "\n";
+					count++;
+				}
+
+			}
+			/*cout << count << "??????";
+			count = 0;*/
+			file << "--------------------------------------\n";
+
+			file.close();
+
+			cout << "Report successfully generated." << endl;
 		}
 
 		void coreJob(int i) {

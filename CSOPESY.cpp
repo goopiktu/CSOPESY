@@ -218,6 +218,9 @@ void mainThread() {
             else if (firstInput == "clear") {
                 Clear();
             }
+            else if (firstInput == "report-util") {
+                screens->report_util();
+            }
             else {
                 std::cout << firstInput << " is not a recognized command.\n";
             }
