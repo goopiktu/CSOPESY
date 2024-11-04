@@ -79,7 +79,7 @@ class ScreenFactory
 					file << output << " Core:" << core << " \"Hello world from " << name << "!\"\n";
 					lineOfInstruction+=1;
 				}
-				else {
+				if (lineOfInstruction >= totalLineofInstruction) {
 					this->status = TERMINATED;
 					file.close();
 				}
