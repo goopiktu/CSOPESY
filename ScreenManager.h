@@ -31,6 +31,7 @@ class ScreenManager {
 		std::mutex ready_queue_mutex;
 		std::mutex running_queue_mutex; 
 
+		int count = 0;
 
 	public:
 		void shutdown() {
@@ -47,7 +48,7 @@ class ScreenManager {
 
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
-				core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i));
+				core_threads.push_back(std::thread(&ScreenManager::coreJob, this, i));
 			}
 		}
 
@@ -106,22 +107,35 @@ class ScreenManager {
 			for (auto& s : screens) {
 				if (s.second->getStatus() == TERMINATED) {
 					cout << s.second->getName() << "\t" << s.second->getTime() << "\tFinished\t" << s.second->getLineOfInstruction() << " / " << s.second->getTotalLineofInstruction() << "\n";
+					count++;
 				}
+				
 			}
+			cout << count << "??????";
+			count = 0;
 			cout << "--------------------------------------\n";
+
+
+			for (auto& s : screens) {
+				cout << "Process Name: " << s.second->getName() << ", Status: " << s.second->getStatus() << endl;
+			}
 		}
 
 		void coreJob(int i) {
 			while (running) {
-				string screen_name = running_queue[i];
-				
-				// Key is not present
-				if (screens.find(screen_name) == screens.end()) continue;
+				std::string screen_name;
+				{
+					std::lock_guard<std::mutex> lock(running_queue_mutex);
+					screen_name = running_queue[i];
+				}
 
-				screens[screen_name]->print(i);
-				Sleep(1000/60);
+				if (screens.find(screen_name) != screens.end()) {
+					// Process exists in screens and hasn't been terminated
+					screens[screen_name]->print(i);
+				}
+
+				Sleep(1000 / 60); // Adjust this as needed
 			}
-			
 		}
 
 		void coreJob_RR(int i) {
@@ -183,31 +197,15 @@ class ScreenManager {
 			}
 		}
 
-		string findFirst() {
-			//return the first 
-			string next_up = "";
-
+		std::string findFirst() {
+			std::string next_up = "";
 			std::lock_guard<std::mutex> lock(ready_queue_mutex);
 
-			/*--- findFirst using ready queue structure ---*/
-			if (ready_queue.empty()) {
-				next_up = "";
-				return next_up;
+			if (!ready_queue.empty()) {
+				ScreenFactory* process = ready_queue.front();
+				ready_queue.pop();
+				next_up = process->getName();
 			}
-
-			ScreenFactory* process = ready_queue.front();
-			ready_queue.pop();
-			next_up = process->getName();
-
-			/*--- Original findFirst implementation ---*/
-			//for (auto& s : screens) {
-			//	if (s.second->getStatus() == READY) {
-			//		//cout << s.second->getStatus();
-			//		next_up = s.second->getName();
-			//		break;
-			//	}
-			//}
-
 			return next_up;
 		}
 
