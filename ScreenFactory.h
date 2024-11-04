@@ -32,8 +32,7 @@ class ScreenFactory
 			this->lineOfInstruction = 0;
 
 			setTotalLineofInstruction(min_ins, max_ins);
-			//this->totalLineofInstruction = setTotalLineofInstruction(min_ins, max_ins);
-			//this->totalLineofInstruction = total_instruction;
+		
 			this->status = READY;
 			this->file = ofstream("output/" + name + ".txt");
 
@@ -81,7 +80,7 @@ class ScreenFactory
 					lineOfInstruction+=1;
 				}
 				else {
-					status = TERMINATED;
+					this->status = TERMINATED;
 					file.close();
 				}
 			}
