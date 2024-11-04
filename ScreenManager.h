@@ -42,6 +42,7 @@ class ScreenManager {
 
 		ScreenManager(int cores, int delay, int timeslice) : cores(cores), insideScreen(false) {
 			delay = delay;
+			timeslice = timeslice;
 
 			for (int i = 0; i < cores; i++) {
 				running_queue.push_back("");
@@ -163,6 +164,7 @@ class ScreenManager {
 					// Process is done
 					/*std::lock_guard<std::mutex> lock(screens_mutex);*/
 					if (screens[screen_name]->getStatus() == TERMINATED) {
+						running_queue[i] = ""; // Clear the running queue
 						counter = 0;
 						continue;
 					}
