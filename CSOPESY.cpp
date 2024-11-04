@@ -67,6 +67,7 @@ void Screen(std::vector<std::string> inputBuffer) {
                 std::cout << "Screen with the name: [" << name << "] already exists.\n";
             }
             else {
+                screens.addScreen(name, config->getMinIns(), config->getMaxIns());
                 screens.isInsideScreen(true);
             }
         }
