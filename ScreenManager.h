@@ -32,13 +32,17 @@ class ScreenManager {
 		std::mutex running_queue_mutex; 
 
 		int count = 0;
+		int delay = 0;
+		int timeslice = 0;
 
 	public:
 		void shutdown() {
 			running = false;
 		}
 
-		ScreenManager(int cores) : cores(cores), insideScreen(false) {
+		ScreenManager(int cores, int delay, int timeslice) : cores(cores), insideScreen(false) {
+			delay = delay;
+
 			for (int i = 0; i < cores; i++) {
 				running_queue.push_back("");
 			}
@@ -122,6 +126,7 @@ class ScreenManager {
 		}
 
 		void coreJob(int i) {
+			int delay = this->delay;
 			while (running) {
 				std::string screen_name;
 				{
@@ -134,13 +139,14 @@ class ScreenManager {
 					screens[screen_name]->print(i);
 				}
 
-				Sleep(1000 / 60); // Adjust this as needed
+				Sleep(delay); // Adjust this as needed
 			}
 		}
 
 		void coreJob_RR(int i) {
-			int time_slice = 15;
+			int time_slice = this->timeslice;
 			int counter = 0;
+			int delay = this->delay;
 			
 			while (running) {
 				std::string screen_name;
@@ -164,7 +170,7 @@ class ScreenManager {
 				}
 
 				// Current process has reached allotted time slice
-				if (counter == time_slice) {
+				if (counter >= time_slice) {
 
 					{ // If no current process in ready_queue, continue process
 						std::string next_up = findFirst();
@@ -194,7 +200,7 @@ class ScreenManager {
 
 				screens[screen_name]->print(i);
 				counter++;
-				Sleep(1000/60);
+				Sleep(delay);
 			}
 		}
 
@@ -237,7 +243,7 @@ class ScreenManager {
 				}// ENDFORLOOP
 
 			/*	std::cout << "RQ: " << ready_queue.size(); */
-				Sleep(1000/60);
+				Sleep(delay);
 			}
 		}
 
