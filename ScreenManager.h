@@ -119,10 +119,9 @@ class ScreenManager {
 				}
 
 				ScreenFactory* s = screens[running_queue[i]];
-				if (s->getStatus() == RUNNING) {
-					cout << s->getName() << "\t" << s->getTime() << "\tCore:"<<i<<"\t" << s->getLineOfInstruction() << " / " << s->getTotalLineofInstruction() << "\n";
+				
+				cout << s->getName() << "\t" << s->getTime() << "\tCore:"<<i<<"\t" << s->getLineOfInstruction() << " / " << s->getTotalLineofInstruction() << "\n";
 
-				}
 			}
 
 			cout << "\nFinished processes: \n";
@@ -136,7 +135,6 @@ class ScreenManager {
 			/*cout << count << "??????";
 			count = 0;*/
 			cout << "--------------------------------------\n";
-
 
 		}
 
@@ -224,7 +222,7 @@ class ScreenManager {
 					// Process is done
 					/*std::lock_guard<std::mutex> lock(screens_mutex);*/
 					if (screens[screen_name]->getStatus() == TERMINATED) {
-						running_queue[i] = ""; // Clear the running queue
+
 						counter = 0;
 						continue;
 					}
@@ -233,27 +231,31 @@ class ScreenManager {
 				// Current process has reached allotted time slice
 				if (counter >= time_slice) {
 
+					if (ready_queue.empty()) {
+						counter = 0;
+						continue;
+					}
+
 					if (screens[screen_name]->getStatus() != TERMINATED) {
 						{	// Change status to ready 
 							std::lock_guard<std::mutex> lock(screens_mutex);
 							screens[screen_name]->setStatus(READY);
 						}
-						{	// Clear current core process
-							std::lock_guard<std::mutex> lock(running_queue_mutex);
-							running_queue[i] = "";
+
+						{	// Requeue process
+							std::lock_guard<std::mutex> lock(ready_queue_mutex);
+							ready_queue.push(screens[screen_name]);
 						}
 					}
-					
-					counter = 0;
 
-					{	// Requeue process
-						std::lock_guard<std::mutex> lock(ready_queue_mutex);
-						ready_queue.push(screens[screen_name]);
-					}
+					counter = 0;
 					continue;
 				} // ENDIF
 
-				screens[screen_name]->print(i);
+				if (screens[screen_name]->getStatus() == RUNNING) {
+					screens[screen_name]->print(i);
+				}
+				
 				counter++;
 
 				
@@ -283,8 +285,8 @@ class ScreenManager {
 						std::unique_lock<std::mutex> lock_screens(screens_mutex, std::defer_lock);
 						std::unique_lock<std::mutex> lock_running(running_queue_mutex, std::defer_lock);
 						std::lock(lock_screens, lock_running); // Lock both mutexes
-						if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() == TERMINATED) {
-							//screen doesnt exist yet or is terminated 
+						if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() != RUNNING) {
+							//screen doesnt exist yet or is not running 
 
 							{
 								// find if smthn is ready
