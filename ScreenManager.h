@@ -31,32 +31,24 @@ class ScreenManager {
 		std::mutex ready_queue_mutex;
 		std::mutex running_queue_mutex; 
 
+
 	public:
 		void shutdown() {
 			running = false;
 		}
 
-		ScreenManager(int cores) {
-			this->cores = cores;
-
+		ScreenManager(int cores) : cores(cores), insideScreen(false) {
 			for (int i = 0; i < cores; i++) {
 				running_queue.push_back("");
 			}
 
 			std::thread manager(&ScreenManager::managerJob, this);
-			  
+			manager.detach(); // Detach the manager thread to let it run independently
+
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
-				core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i)); // TODO: Make the cores run the appropriate scheduler based on user input
-			};
-
-
-			/*--- Execute Cores ---*/
-			manager.join();
-
-			for (int i = 0; i < cores; i++) {
-				core_threads[i].join();
-			};
+				core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i));
+			}
 		}
 
 		void addScreen(string name, int min_ins, int max_ins) {

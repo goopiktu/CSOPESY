@@ -1,5 +1,3 @@
-// CSOPESY.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
 #include "ScreenFactory.h"
 #include "ScreenManager.h"
 #include "Config.h"
@@ -18,13 +16,14 @@ int cpu_cycles = 0;
 bool running = true;
 std::atomic<bool> initialized(false);  // Track initialization status
 Config* config = Config::getInstance();
+ScreenManager* screens = nullptr; // Pointer to ScreenManager
+
 void mainThread();
 void cpuCycle();
 
 std::thread main_worker(mainThread);
 std::thread scheduler_test_thread;
 std::thread cpu_cycle(cpuCycle);
-ScreenManager screens(4); // Initialize ScreenManager with 4 cores
 std::atomic<bool> making_process(false);
 
 // Clear screen function
@@ -42,9 +41,20 @@ void Clear() {
     std::cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
 }
 
+void initializeScreens() {
+    std::cout << "Initializing screens with " << config->getNumCPU() << " CPUs.\n"; // Debug output
+    screens = new ScreenManager(config->getNumCPU());
+    if (screens) {
+        std::cout << "ScreenManager initialized successfully.\n"; // Debug output
+    }
+    else {
+        std::cout << "Failed to initialize ScreenManager.\n"; // Debug output
+    }
+}
+
 void Screen(std::vector<std::string> inputBuffer) {
     if (inputBuffer.size() == 2 && inputBuffer[1] == "-ls") {
-        screens.listScreens();
+        screens->listScreens();
     }
     else if (inputBuffer.size() == 3) {
         std::string action = inputBuffer[1];
@@ -52,23 +62,23 @@ void Screen(std::vector<std::string> inputBuffer) {
 
         if (action == "-r") {
             std::cout << "Restoring screen with name: " << name << "\n";
-            if (!screens.sFind(name)) {
+            if (!screens->sFind(name)) {
                 std::cout << "Screen with the name: [" << name << "] does not exist.\n";
             }
             else {
-                screens.displayScreen(name);
-                screens.loopScreen(name);
+                screens->displayScreen(name);
+                screens->loopScreen(name);
                 Clear();
             }
         }
         else if (action == "-s") {
             std::cout << "Creating a new screen with name: " << name << "\n";
-            if (screens.sFind(name)) {
+            if (screens->sFind(name)) {
                 std::cout << "Screen with the name: [" << name << "] already exists.\n";
             }
             else {
-                screens.addScreen(name, config->getMinIns(), config->getMaxIns());
-                screens.isInsideScreen(true);
+                screens->addScreen(name, config->getMinIns(), config->getMaxIns());
+                screens->isInsideScreen(true);
             }
         }
         else {
@@ -89,7 +99,7 @@ void SchedulerTest(int batch_process_freq, int min_ins, int max_ins) {
             while (making_process.load()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq));
                 std::string process_name = "Process_" + std::to_string(process_count++);
-                screens.addScreen(process_name, min_ins, max_ins);
+                screens->addScreen(process_name, min_ins, max_ins);
             }
             });
     }
@@ -107,7 +117,8 @@ void SchedulerStop() {
 }
 
 void Exit() {
-    screens.shutdown();
+    screens->shutdown();
+    delete screens; // Clean up
     std::cout << "Exiting program.\n";
     running = false;
 }
@@ -162,16 +173,21 @@ void mainThread() {
         if (inputBuffer.size() <= 0) continue;
 
         std::string firstInput = inputBuffer[0];
-        Config* config = Config::getInstance(); // Access singleton instance
 
         if (firstInput == "exit") {
             Exit();
         }
         else if (firstInput == "initialize") {
+            std::cout << "Initializing...\n"; // Debug output
             try {
+                std::cout << "Loading configuration...\n"; // Debug output
                 config->loadConfig("config.txt"); // Load configuration file
+                std::cout << "Config loaded.\n"; // Debug output
+
                 if (config->isInitialized()) {
                     initialized.store(true);
+                    std::cout << "Screens initialization...\n"; // Debug output
+                    initializeScreens(); // Call to initialize screens after successful config load
                     std::cout << "Configuration loaded successfully.\n";
                 }
                 else {
@@ -181,7 +197,11 @@ void mainThread() {
             catch (const ConfigException& e) {
                 std::cerr << "Configuration error: " << e.what() << "\n";
             }
+            catch (const std::exception& e) {
+                std::cerr << "Unexpected error: " << e.what() << "\n"; // Catch any unexpected errors
+            }
         }
+
         else if (initialized.load()) {
             if (firstInput == "screen") {
                 Screen(inputBuffer);
@@ -206,7 +226,6 @@ void mainThread() {
 }
 
 void cpuCycle() {
-    Config* config = Config::getInstance(); // Access singleton instance
     while (running) {
         cpu_cycles++;
         std::this_thread::sleep_for(std::chrono::milliseconds(config->getDelayPerExec()));
@@ -214,21 +233,7 @@ void cpuCycle() {
 }
 
 int main() {
-    cpu_cycle.join();
+    std::thread cpu_cycle(cpuCycle); // Create CPU cycle thread
     main_worker.join();
+    cpu_cycle.join(); // Wait for CPU cycle thread to finish
 }
-
-
-
-
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
