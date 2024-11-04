@@ -116,14 +116,14 @@ class ScreenManager {
 				}
 				
 			}
-			cout << count << "??????";
-			count = 0;
+			/*cout << count << "??????";
+			count = 0;*/
 			cout << "--------------------------------------\n";
 
 
-			for (auto& s : screens) {
+			/*for (auto& s : screens) {
 				cout << "Process Name: " << s.second->getName() << ", Status: " << s.second->getStatus() << endl;
-			}
+			}*/
 		}
 
 		void coreJob(int i) {
