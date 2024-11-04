@@ -111,14 +111,14 @@ class ScreenManager {
 				}
 				
 			}
-			cout << count << "??????";
-			count = 0;
+			/*cout << count << "??????";
+			count = 0;*/
 			cout << "--------------------------------------\n";
 
 
-			for (auto& s : screens) {
+			/*for (auto& s : screens) {
 				cout << "Process Name: " << s.second->getName() << ", Status: " << s.second->getStatus() << endl;
-			}
+			}*/
 		}
 
 		void coreJob(int i) {
@@ -157,6 +157,7 @@ class ScreenManager {
 					// Process is done
 					/*std::lock_guard<std::mutex> lock(screens_mutex);*/
 					if (screens[screen_name]->getStatus() == TERMINATED) {
+						running_queue[i] = ""; // Clear the running queue
 						counter = 0;
 						continue;
 					}
