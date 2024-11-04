@@ -198,7 +198,7 @@ class ScreenManager {
 					screens[screen_name]->print(i);
 				}
 
-				Sleep(delay); // Adjust this as needed
+				Sleep(delay+1); // Adjust this as needed
 			}
 		}
 
@@ -259,7 +259,7 @@ class ScreenManager {
 				counter++;
 
 				
-				Sleep(delay);
+				Sleep(delay + 1);
 			}
 		}
 
