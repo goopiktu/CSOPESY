@@ -149,7 +149,7 @@ class ScreenManager {
 				}
 
 				// Current process has reached allotted time slice
-				if (counter == time_slice) {
+				if (counter >= time_slice) {
 
 					{ // If no current process in ready_queue, continue process
 						std::string next_up = findFirst();
