@@ -292,7 +292,10 @@ class ScreenManager {
 								// find if smthn is ready
 								next_up = findFirst();
 							}
-							if (next_up == "") continue;
+							if (next_up == "") {
+								running_queue[i] = "";
+								continue;
+							};
 
 							screens[next_up]->setStatus(RUNNING);
 							running_queue[i] = next_up;
