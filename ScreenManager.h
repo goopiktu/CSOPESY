@@ -302,7 +302,6 @@ class ScreenManager {
 				//listScreens();
 
 			/*	std::cout << "RQ: " << ready_queue.size(); */
-				Sleep(delay);
 			}
 		}
 
