@@ -40,9 +40,9 @@ class ScreenManager {
 			running = false;
 		}
 
-		ScreenManager(int cores, int delay, int timeslice) : cores(cores), insideScreen(false) {
-			delay = delay;
-			timeslice = timeslice;
+		ScreenManager(int cores, int delay, int timeslice, int RR) : cores(cores), insideScreen(false) {
+			this->delay = delay;
+			this->timeslice = timeslice;
 
 			for (int i = 0; i < cores; i++) {
 				running_queue.push_back("");
@@ -53,7 +53,13 @@ class ScreenManager {
 
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
-				core_threads.push_back(std::thread(&ScreenManager::coreJob, this, i));
+				if (RR == 1) {
+					core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i));
+				}
+				else {
+					core_threads.push_back(std::thread(&ScreenManager::coreJob, this, i));
+				}
+				
 			}
 		}
 

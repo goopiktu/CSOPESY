@@ -43,7 +43,10 @@ void Clear() {
 
 void initializeScreens() {
     std::cout << "Initializing screens with " << config->getNumCPU() << " CPUs.\n"; // Debug output
-    screens = new ScreenManager(config->getNumCPU(), config->getDelayPerExec(), config->getQuantumCycles());
+    int RR = 0;
+    if (config->getSchedulerType() == "rr") RR = 1;
+
+    screens = new ScreenManager(config->getNumCPU(), config->getDelayPerExec(), config->getQuantumCycles(), RR);
     if (screens) {
         std::cout << "ScreenManager initialized successfully.\n"; // Debug output
     }
