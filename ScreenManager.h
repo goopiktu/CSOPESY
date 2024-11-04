@@ -127,9 +127,11 @@ class ScreenManager {
 			cout << "--------------------------------------\n";
 
 
-			/*for (auto& s : screens) {
+			for (auto& s : screens) {
 				cout << "Process Name: " << s.second->getName() << ", Status: " << s.second->getStatus() << endl;
-			}*/
+			}
+
+			cout << "RQ: " << ready_queue.size() << endl;
 		}
 
 		void coreJob(int i) {
@@ -179,24 +181,18 @@ class ScreenManager {
 				// Current process has reached allotted time slice
 				if (counter >= time_slice) {
 
-					{ // If no current process in ready_queue, continue process
-						std::string next_up = findFirst();
-						if (next_up == "") {
-							counter = 0;
-							continue;
+					if (screens[screen_name]->getStatus() != TERMINATED) {
+						{	// Change status to ready 
+							std::lock_guard<std::mutex> lock(screens_mutex);
+							screens[screen_name]->setStatus(READY);
+						}
+						{	// Clear current core process
+							std::lock_guard<std::mutex> lock(running_queue_mutex);
+							running_queue[i] = "";
 						}
 					}
 					
-					{	// Change status to ready 
-						std::lock_guard<std::mutex> lock(screens_mutex);
-						screens[screen_name]->setStatus(READY);
-					}
 					counter = 0;
-
-					{	// Clear current core process
-						std::lock_guard<std::mutex> lock(running_queue_mutex);
-						running_queue[i] = "";
-					}
 
 					{	// Requeue process
 						std::lock_guard<std::mutex> lock(ready_queue_mutex);
@@ -207,6 +203,8 @@ class ScreenManager {
 
 				screens[screen_name]->print(i);
 				counter++;
+
+				
 				Sleep(delay);
 			}
 		}
@@ -248,6 +246,8 @@ class ScreenManager {
 						} // ENDIF
 					} //END MUTEX LOCK
 				}// ENDFORLOOP
+
+				//listScreens();
 
 			/*	std::cout << "RQ: " << ready_queue.size(); */
 				Sleep(delay);
