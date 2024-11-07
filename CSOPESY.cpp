@@ -104,7 +104,7 @@ void SchedulerTest(int batch_process_freq, int min_ins, int max_ins) {
         scheduler_test_thread = std::thread([=]() {
             int process_count = 0;
             while (making_process.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*1000));
+                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*100));
                 std::string process_name = "Process_" + std::to_string(process_count++);
                 screens->addScreen(process_name, min_ins, max_ins);
             }
