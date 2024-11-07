@@ -47,6 +47,10 @@ public:
     uint32_t getMinIns() const { return min_ins; }
     uint32_t getMaxIns() const { return max_ins; }
     uint32_t getDelayPerExec() const { return delay_per_exec; }
+
+    uint32_t getMaxOverallMem() const { return max_overall_mem; }
+    uint32_t getMemPerFrame() const { return mem_per_frame; }
+    uint32_t getMemPerProc() const { return mem_per_proc; }
 };
 
 Config* Config::instancePtr = nullptr;

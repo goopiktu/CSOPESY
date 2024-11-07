@@ -7,6 +7,7 @@
 #include <conio.h>
 #include <thread>
 #include <atomic>
+#include "Memory.h"
 
 std::string green = "\033[32m";
 std::string reset = "\033[0m";
@@ -41,12 +42,15 @@ void Clear() {
     std::cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
 }
 
+FlatMemoryAllocator* memoryAllocator = nullptr;
+
 void initializeScreens() {
     std::cout << "Initializing screens with " << config->getNumCPU() << " CPUs.\n"; // Debug output
     int RR = 0;
     if (config->getSchedulerType() == "rr") RR = 1;
 
-    screens = new ScreenManager(config->getNumCPU(), config->getDelayPerExec(), config->getQuantumCycles(), RR);
+    memoryAllocator = new FlatMemoryAllocator(config->getMaxOverallMem());
+    screens = new ScreenManager(config->getNumCPU(), config->getDelayPerExec(), config->getQuantumCycles(), RR, *memoryAllocator, config->getMemPerProc(), config->getMemPerFrame());
     if (screens) {
         std::cout << "ScreenManager initialized successfully.\n"; // Debug output
     }

@@ -9,6 +9,7 @@
 #include "ScreenFactory.h"
 #include <thread>
 #include <Windows.h>
+#include "Memory.h"
 
 class ScreenManager {
 
@@ -35,14 +36,21 @@ class ScreenManager {
 		int delay = 0;
 		int timeslice = 0;
 
+		IMemoryAllocator& memoryAllocator;
+		int mem_per_proc = 0;
+		int mem_per_frame = 0;
+
 	public:
 		void shutdown() {
 			running = false;
 		}
 
-		ScreenManager(int cores, int delay, int timeslice, int RR) : cores(cores), insideScreen(false) {
+		ScreenManager(int cores, int delay, int timeslice, int RR, IMemoryAllocator& memoryAllocator, int mem_per_proc, int mem_per_frame) : cores(cores), insideScreen(false), memoryAllocator(memoryAllocator) {
 			this->delay = delay;
 			this->timeslice = timeslice;
+			this->mem_per_proc = mem_per_proc;
+			this->mem_per_frame = mem_per_frame;
+
 
 			for (int i = 0; i < cores; i++) {
 				running_queue.push_back("");
@@ -64,7 +72,7 @@ class ScreenManager {
 		}
 
 		void addScreen(string name, int min_ins, int max_ins) {
-			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins);
+			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins, mem_per_proc);
 			{
 				std::lock_guard<std::mutex> lock(screens_mutex);
 				screens[name] = screen;
@@ -184,6 +192,42 @@ class ScreenManager {
 			cout << "Report successfully generated." << endl;
 		}
 
+		int quantum_time = 0;
+		void printMemory() {
+			ofstream file = ofstream("memlogs/memory_stamp_" + std::to_string(quantum_time) + ".txt");
+
+
+			time_t now = time(0);
+			tm localTime;
+			localtime_s(&localTime, &now);
+
+			char output[50];
+
+			strftime(output, 50, "(%m/%d/%y %H:%M:%S %p)", &localTime);
+
+			file << "Timestamp" << output << endl;
+			
+			file << "Number of processes in memory: " << memoryAllocator.getAllocatedSize() / mem_per_proc << endl;
+			file << "Total external fragmentation in KB: " << memoryAllocator.getAllocatedSize() << endl;
+
+			file << "----end---- = " << memoryAllocator.getMaximumSize() << "\n\n";
+
+			for (int i = 0; i < cores; i++) {
+				if (screens.find(running_queue[i]) == screens.end()) {
+					file << "---\nIDLE\n---\n\n";
+					continue;
+				}
+
+				ScreenFactory* s = screens[running_queue[i]];
+				
+				size_t base = memoryAllocator.ptr_to_index(s->getMemoryAddress());
+				file << (base + s->getMemoryRequired())-1 << "\n" << s->getName() << endl << base << "\n\n";
+			}
+
+			file << "---start--- = 0\n\n";
+			quantum_time++;
+		}
+
 		void coreJob(int i) {
 			int delay = this->delay;
 			while (running) {
@@ -222,7 +266,7 @@ class ScreenManager {
 					// Process is done
 					/*std::lock_guard<std::mutex> lock(screens_mutex);*/
 					if (screens[screen_name]->getStatus() == TERMINATED) {
-
+						
 						counter = 0;
 						continue;
 					}
@@ -232,6 +276,7 @@ class ScreenManager {
 				if (counter >= time_slice) {
 
 					if (ready_queue.empty()) {
+						
 						counter = 0;
 						continue;
 					}
@@ -239,7 +284,7 @@ class ScreenManager {
 					if (screens[screen_name]->getStatus() != TERMINATED) {
 						{	// Change status to ready 
 							std::lock_guard<std::mutex> lock(screens_mutex);
-							screens[screen_name]->setStatus(READY);
+							screens[screen_name]->setStatus(WAITING);
 						}
 
 						{	// Requeue process
@@ -247,7 +292,7 @@ class ScreenManager {
 							ready_queue.push(screens[screen_name]);
 						}
 					}
-
+					
 					counter = 0;
 					continue;
 				} // ENDIF
@@ -257,7 +302,7 @@ class ScreenManager {
 				}
 				
 				counter++;
-
+				
 				
 				Sleep(delay * 1000 + 1);
 			}
@@ -277,7 +322,7 @@ class ScreenManager {
 
 		void managerJob() {
 			while (running) {
-				
+				bool change = false;
 				for (int i = 0; i < cores; i++) {
 					std::string next_up;
 					{
@@ -285,9 +330,13 @@ class ScreenManager {
 						std::unique_lock<std::mutex> lock_screens(screens_mutex, std::defer_lock);
 						std::unique_lock<std::mutex> lock_running(running_queue_mutex, std::defer_lock);
 						std::lock(lock_screens, lock_running); // Lock both mutexes
-						if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() != RUNNING) {
-							//screen doesnt exist yet or is not running 
-
+						if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() != RUNNING) { 
+							//dealloc finished process
+							if (screens.find(running_queue[i]) != screens.end() && screens[running_queue[i]]->getStatus() == TERMINATED) {
+								void* addr = screens[running_queue[i]]->getMemoryAddress();
+								memoryAllocator.deallocate(addr, screens[running_queue[i]]->getMemoryRequired());
+							}
+							
 							{
 								// find if smthn is ready
 								next_up = findFirst();
@@ -297,13 +346,36 @@ class ScreenManager {
 								continue;
 							};
 
-							screens[next_up]->setStatus(RUNNING);
-							running_queue[i] = next_up;
+							change = true;
+							
+							if (screens[next_up]->getStatus() == WAITING) {
+								//if process has already been allocated / from waiting
+								screens[next_up]->setStatus(RUNNING);
+								running_queue[i] = next_up;
+								
+								continue;
+							}
+
+							//allocate memory
+							void* mem = memoryAllocator.allocate(screens[next_up]->getMemoryRequired());
+							if (mem != nullptr) {
+								//theres memory!
+								screens[next_up]->setMemoryAddress(mem);
+								screens[next_up]->setStatus(RUNNING);
+								running_queue[i] = next_up;
+							}
+							else {
+								//boo try again
+								screens[next_up]->setStatus(READY);
+								ready_queue.push(screens[next_up]);
+							}
+
 							continue;
 						} // ENDIF
 					} //END MUTEX LOCK
 				}// ENDFORLOOP
-
+				 
+				if(change) printMemory();
 				//listScreens();
 
 			/*	std::cout << "RQ: " << ready_queue.size(); */

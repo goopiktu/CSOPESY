@@ -23,13 +23,16 @@ class ScreenFactory
 		int lineOfInstruction;
 		int totalLineofInstruction;
 		Status status;
+		size_t memoryRequired;
+		void* memoryAddress;
 
 		ofstream file;
 	
 	public:
-		ScreenFactory(string name, int min_ins, int max_ins) {
+		ScreenFactory(string name, int min_ins, int max_ins, size_t memoryRequired) {
 			this->name = name;
 			this->lineOfInstruction = 0;
+			this->memoryRequired = memoryRequired;
 
 			setTotalLineofInstruction(min_ins, max_ins);
 		
@@ -56,12 +59,24 @@ class ScreenFactory
 			status = s;
 		}
 
-		int getLineOfInstruction() {
+		int getLineOfInstruction() const {
 			return lineOfInstruction;
 		}
 
-		int getTotalLineofInstruction() {
+		int getTotalLineofInstruction() const {
 			return totalLineofInstruction;
+		}
+
+		size_t getMemoryRequired() const {
+			return memoryRequired;
+		}
+
+		void setMemoryAddress(void* addr) {
+			this->memoryAddress = addr;
+		}
+
+		void* getMemoryAddress() {
+			return memoryAddress;
 		}
 
 		void print(int core) {
