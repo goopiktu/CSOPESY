@@ -20,6 +20,10 @@ private:
     uint32_t min_ins;  // Range: [1, 2^32]
     uint32_t max_ins;  // Range: [1, 2^32]
     uint32_t delay_per_exec;    // Range: [0, 2^32]
+
+    uint32_t max_overall_mem;
+    uint32_t mem_per_frame;
+    uint32_t mem_per_proc;
     bool initialized = false;
 
     static Config* instancePtr;
@@ -60,7 +64,10 @@ void Config::loadConfig(const std::string& filename) {
         {"batch-process-freq", false},
         {"min-ins", false},
         {"max-ins", false},
-        {"delay-per-exec", false}
+        {"delay-per-exec", false},
+        {"max-overall-mem", false},
+        {"mem-per-frame", false},
+        {"mem-per-proc", false}
     };
 
     std::string param;
@@ -71,6 +78,7 @@ void Config::loadConfig(const std::string& filename) {
         }
         else if (param == "scheduler") {
             file >> scheduler_type;
+            scheduler_type = scheduler_type.substr(1, scheduler_type.size() - 2); //remove the ""s
             requiredParams[param] = true;
         }
         else if (param == "quantum-cycles") {
@@ -91,6 +99,18 @@ void Config::loadConfig(const std::string& filename) {
         }
         else if (param == "delay-per-exec") {
             file >> delay_per_exec;
+            requiredParams[param] = true;
+        }
+        else if (param == "max-overall-mem") {
+            file >> max_overall_mem;
+            requiredParams[param] = true;
+        }
+        else if (param == "mem-per-frame") {
+            file >> mem_per_frame;
+            requiredParams[param] = true;
+        }
+        else if (param == "mem-per-proc") {
+            file >> mem_per_proc;
             requiredParams[param] = true;
         }
         else {
@@ -137,4 +157,6 @@ void Config::validateParameters() {
     if (delay_per_exec < 0) {
         throw ConfigException("Invalid delays per execution (must be non-negative): " + std::to_string(delay_per_exec));
     }
+
+    //TODO: validation for memory 
 }
