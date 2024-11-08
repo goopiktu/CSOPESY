@@ -7,6 +7,7 @@
 #include <conio.h>
 #include <thread>
 #include <atomic>
+#include <cstdlib>
 #include "Memory.h"
 
 std::string green = "\033[32m";
@@ -14,7 +15,7 @@ std::string reset = "\033[0m";
 std::string yellow = "\033[38;5;229m";
 
 int cpu_cycles = 0;
-bool running = true;
+std::atomic<bool> running{ true };
 std::atomic<bool> initialized(false);  // Track initialization status
 Config* config = Config::getInstance();
 ScreenManager* screens = nullptr; // Pointer to ScreenManager
@@ -124,8 +125,11 @@ void SchedulerStop() {
 }
 
 void Exit() {
-    screens->shutdown();
+    if (screens) {
+        screens->shutdown();
+    }
     delete screens; // Clean up
+    screens = nullptr;
     std::cout << "Exiting program.\n";
     running = false;
 }
@@ -183,6 +187,8 @@ void mainThread() {
 
         if (firstInput == "exit") {
             Exit();
+            _Exit(0);
+            //td::abort();
         }
         else if (firstInput == "initialize") {
             std::cout << "Initializing...\n"; // Debug output
@@ -246,4 +252,6 @@ int main() {
     std::thread cpu_cycle(cpuCycle); // Create CPU cycle thread
     main_worker.join();
     cpu_cycle.join(); // Wait for CPU cycle thread to finish
+
+    
 }

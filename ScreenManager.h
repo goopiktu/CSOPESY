@@ -20,6 +20,7 @@ class ScreenManager {
 
 		std::vector <string> running_queue;
 		std::vector <thread> core_threads;
+		std::thread manager_thread;
 		int cores;
 		bool insideScreen;
 
@@ -41,9 +42,9 @@ class ScreenManager {
 		int mem_per_frame = 0;
 
 	public:
-		void shutdown() {
+		/*void shutdown() {
 			running = false;
-		}
+		}*/
 
 		ScreenManager(int cores, int delay, int timeslice, int RR, IMemoryAllocator& memoryAllocator, int mem_per_proc, int mem_per_frame) : cores(cores), insideScreen(false), memoryAllocator(memoryAllocator) {
 			this->delay = delay;
@@ -56,8 +57,8 @@ class ScreenManager {
 				running_queue.push_back("");
 			}
 
-			std::thread manager(&ScreenManager::managerJob, this);
-			manager.detach(); // Detach the manager thread to let it run independently
+			manager_thread = std::thread(&ScreenManager::managerJob, this);
+			//manager.detach(); // Detach the manager thread to let it run independently
 
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
@@ -70,6 +71,23 @@ class ScreenManager {
 				
 			}
 		}
+
+		void shutdown() {
+			running = false;  // Signal threads to stop
+
+			// Join manager thread if joinable
+			if (manager_thread.joinable()) {
+				manager_thread.join();
+			}
+
+			// Join all core threads
+			for (std::thread& t : core_threads) {
+				if (t.joinable()) {
+					t.join();
+				}
+			}
+		}
+
 
 		void addScreen(string name, int min_ins, int max_ins) {
 			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins, mem_per_proc);
