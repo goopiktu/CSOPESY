@@ -208,7 +208,7 @@ class ScreenManager {
 			file << "Timestamp" << output << endl;
 			
 			file << "Number of processes in memory: " << memoryAllocator.getAllocatedSize() / mem_per_proc << endl;
-			file << "Total external fragmentation in KB: " << memoryAllocator.getAllocatedSize() << endl;
+			file << "Total external fragmentation in KB: " << memoryAllocator.getMaximumSize() - memoryAllocator.getAllocatedSize() << endl;
 
 			file << "----end---- = " << memoryAllocator.getMaximumSize() << "\n\n";
 
