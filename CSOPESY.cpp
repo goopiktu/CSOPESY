@@ -9,6 +9,23 @@
 #include <atomic>
 #include <cstdlib>
 #include "Memory.h"
+#include "Command.h"
+#include "InputHandler.h"
+
+Command getCommandFromString(const std::string& commandStr) {
+    static const std::unordered_map<std::string, Command> commandMap = {
+        {"exit", Command::EXIT},
+        {"initialize", Command::INITIALIZE},
+        {"screen", Command::SCREEN},
+        {"scheduler-test", Command::SCHEDULER_TEST},
+        {"scheduler-stop", Command::SCHEDULER_STOP},
+        {"clear", Command::CLEAR},
+        {"report-util", Command::REPORT_UTIL}
+    };
+
+    auto it = commandMap.find(commandStr);
+    return it != commandMap.end() ? it->second : Command::INVALID;
+}
 
 std::string green = "\033[32m";
 std::string reset = "\033[0m";
@@ -145,101 +162,79 @@ std::vector<std::string> split_sentence(std::string sen) {
 }
 
 void mainThread() {
-    std::string inputBufferB;
-    std::vector<std::string> inputBuffer;
-    bool input_done = false;
     Clear();
 
     while (running) {
-        inputBuffer.clear();
-        inputBufferB.clear();
-        input_done = false;
+        // Get user input
+        std::string input = InputHandler::getUserInput();
+        std::vector<std::string> inputBuffer = InputHandler::splitInput(input);
 
-        std::cout << "Enter a command: ";
-        while (!input_done) {
-            if (_kbhit()) {
-                char ch = _getch();
-                switch (ch) {
-                case 8: // backspace
-                    if (inputBufferB.size() > 0) {
-                        inputBufferB.pop_back();
-                        std::cout << "\b \b";
-                    }
-                    break;
-                case 13: // enter
-                    std::cout << "\n";
-                    input_done = true;
-                    break;
-                default:
-                    if (ch >= 32 && ch <= 126) {
-                        inputBufferB.push_back(ch);
-                        std::cout << ch;
-                    }
-                    break;
-                }
-            }
+        if (inputBuffer.empty()) continue;
+
+        // Parse command
+        Command command = getCommandFromString(inputBuffer[0]);
+
+        // Check if initialization is required
+        if (!initialized.load() && command != Command::INITIALIZE && command != Command::EXIT) {
+            std::cout << "Error: The program must be initialized before using this command.\n";
+            std::cout << "Type 'initialize' to configure the system, or 'exit' to quit.\n";
+            continue;
         }
 
-        inputBuffer = split_sentence(inputBufferB);
-        if (inputBuffer.size() <= 0) continue;
-
-        std::string firstInput = inputBuffer[0];
-
-        if (firstInput == "exit") {
+        // Handle commands
+        switch (command) {
+        case Command::EXIT:
             Exit();
             _Exit(0);
-            //td::abort();
-        }
-        else if (firstInput == "initialize") {
-            std::cout << "Initializing...\n"; // Debug output
-            try {
-                std::cout << "Loading configuration...\n"; // Debug output
-                config->loadConfig("config.txt"); // Load configuration file
-                std::cout << "Config loaded.\n"; // Debug output
+            break;
 
+        case Command::INITIALIZE:
+            std::cout << "Initializing...\n";
+            try {
+                config->loadConfig("config.txt");
                 if (config->isInitialized()) {
                     initialized.store(true);
-                    std::cout << "Screens initialization...\n"; // Debug output
-                    initializeScreens(); // Call to initialize screens after successful config load
+                    initializeScreens();
                     std::cout << "Configuration loaded successfully.\n";
                 }
                 else {
                     std::cout << "Failed to initialize configuration.\n";
                 }
             }
-            catch (const ConfigException& e) {
-                std::cerr << "Configuration error: " << e.what() << "\n";
-            }
             catch (const std::exception& e) {
-                std::cerr << "Unexpected error: " << e.what() << "\n"; // Catch any unexpected errors
+                std::cerr << "Error: " << e.what() << "\n";
             }
-        }
+            break;
 
-        else if (initialized.load()) {
-            if (firstInput == "screen") {
-                Screen(inputBuffer);
-            }
-            else if (firstInput == "scheduler-test") {
-                SchedulerTest(config->getBatchProcessFreq(), config->getMinIns(), config->getMaxIns());
-            }
-            else if (firstInput == "scheduler-stop") {
-                SchedulerStop();
-            }
-            else if (firstInput == "clear") {
-                Clear();
-            }
-            else if (firstInput == "report-util") {
-                screens->report_util();
-            }
-            else {
-                std::cout << firstInput << " is not a recognized command.\n";
-            }
-        }
-        else {
-            std::cout << "You must initialize first.\n";
+        case Command::SCREEN:
+            Screen(inputBuffer);
+            break;
+
+        case Command::SCHEDULER_TEST:
+            SchedulerTest(config->getBatchProcessFreq(), config->getMinIns(), config->getMaxIns());
+            break;
+
+        case Command::SCHEDULER_STOP:
+            SchedulerStop();
+            break;
+
+        case Command::CLEAR:
+            Clear();
+            break;
+
+        case Command::REPORT_UTIL:
+            screens->report_util();
+            break;
+
+        case Command::INVALID:
+        default:
+            std::cout << "Invalid command. Please try again.\n";
+            break;
         }
     }
 }
+
+
 
 void cpuCycle() {
     while (running) {
@@ -253,5 +248,5 @@ int main() {
     main_worker.join();
     cpu_cycle.join(); // Wait for CPU cycle thread to finish
 
-    
+    return 0;
 }

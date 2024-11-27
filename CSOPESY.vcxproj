@@ -130,7 +130,9 @@
     <ClCompile Include="CSOPESY.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Command.h" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="InputHandler.h" />
     <ClInclude Include="Memory.h" />
     <ClInclude Include="ScreenFactory.h" />
     <ClInclude Include="ScreenManager.h" />
