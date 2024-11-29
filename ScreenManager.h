@@ -250,8 +250,8 @@ class ScreenManager {
 
 				ScreenFactory* s = screens[running_queue[i]];
 				
-				size_t base = memoryAllocator.ptr_to_index(s->getMemoryAddress());
-				file << (base + s->getMemoryRequired())-1 << "\n" << s->getName() << endl << base << "\n\n";
+				//size_t base = memoryAllocator.ptr_to_index(s->getMemoryAddress());
+				//file << (base + s->getMemoryRequired())-1 << "\n" << s->getName() << endl << base << "\n\n";
 			}
 
 			file << "---start--- = 0\n\n";

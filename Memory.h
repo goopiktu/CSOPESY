@@ -7,7 +7,6 @@ class IMemoryAllocator {
 public:
 	virtual void* allocate(size_t size) = 0;
 	virtual void deallocate(void* ptr, size_t size) = 0;
-	virtual size_t ptr_to_index(void* ptr) = 0;
 	virtual std::string visualizeMemory() = 0;
 
 	virtual size_t getMaximumSize() = 0;
@@ -22,8 +21,6 @@ private:
 	std::vector<char> memory;
 	std::vector<bool> allocationMap;
 	//std::unordered_map<size_t, bool> allocationMap;
-
-	
 
 	void initializeMemory(size_t maximumSize) {
 		for (size_t i = 0; i < maximumSize; i++) {
@@ -72,10 +69,6 @@ public:
 		}
 
 		return nullptr;
-	}
-
-	size_t ptr_to_index(void* ptr) override {
-		return static_cast<char*>(ptr) - &memory[0];
 	}
 
 	void deallocate(void* ptr, size_t size) override {
@@ -158,4 +151,8 @@ public:
 	size_t getAllocatedSize() override {
 		return (numFrames - freeFrameList.size()) * frameSize;
 	}
+
+	std::string visualizeMemory() override {
+		return std::string(memory.begin(), memory.end());
+	} 
 };

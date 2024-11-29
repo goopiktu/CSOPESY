@@ -60,12 +60,20 @@ void Clear() {
     std::cout << yellow << "Type 'exit' to quit, 'clear' to clear the screen\n" << reset;
 }
 
-FlatMemoryAllocator* memoryAllocator = nullptr;
+IMemoryAllocator* memoryAllocator = nullptr;
 
 void initializeScreens() {
     std::cout << "Initializing screens with " << config->getNumCPU() << " CPUs.\n"; // Debug output
 
-    memoryAllocator = new FlatMemoryAllocator(config->getMaxOverallMem());
+    
+    if (config->getMaxOverallMem() == config->getMemPerFrame()) {
+        //flat memory allocator
+        memoryAllocator = new FlatMemoryAllocator(config->getMaxOverallMem());
+    }
+    else {
+        memoryAllocator = new PagingAllocator(config->getMaxOverallMem(), config->getMemPerFrame());
+    }
+
     screens = new ScreenManager(*config, *memoryAllocator);
     if (screens) {
         std::cout << "ScreenManager initialized successfully.\n"; // Debug output
