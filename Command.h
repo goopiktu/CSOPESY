@@ -8,6 +8,7 @@ enum class Command {
     SCHEDULER_STOP,
     CLEAR,
     REPORT_UTIL,
+    PROCESS_SMI,
     INVALID // For unrecognized commands
 };
 

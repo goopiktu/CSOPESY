@@ -20,7 +20,8 @@ Command getCommandFromString(const std::string& commandStr) {
         {"scheduler-test", Command::SCHEDULER_TEST},
         {"scheduler-stop", Command::SCHEDULER_STOP},
         {"clear", Command::CLEAR},
-        {"report-util", Command::REPORT_UTIL}
+        {"report-util", Command::REPORT_UTIL},
+        {"process-smi", Command::PROCESS_SMI}
     };
 
     auto it = commandMap.find(commandStr);
@@ -231,7 +232,9 @@ void mainThread() {
         case Command::REPORT_UTIL:
             screens->report_util();
             break;
-
+        case Command::PROCESS_SMI:
+            screens->process_SMI();
+            break;
         case Command::INVALID:
         default:
             std::cout << "Invalid command. Please try again.\n";

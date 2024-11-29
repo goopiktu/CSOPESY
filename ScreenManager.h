@@ -52,7 +52,7 @@ class ScreenManager {
 			running = false;
 		}*/
 
-		ScreenManager(Config config, IMemoryAllocator& memoryAllocator) : memoryAllocator(memoryAllocator) {
+		ScreenManager(Config& config, IMemoryAllocator& memoryAllocator) : memoryAllocator(memoryAllocator) {
 		
 			this->delay = config.getDelayPerExec();
 			this->timeslice = config.getQuantumCycles();
@@ -60,8 +60,8 @@ class ScreenManager {
 			this->max_mem = config.getMaxMemPerProc();
 			this->min_mem = config.getMinMemPerProc();
 
-			this->max_mem = config.getMaxIns();
-			this->min_mem = config.getMinIns();
+			this->max_ins = config.getMaxIns();
+			this->min_ins = config.getMinIns();
 
 			this->cores = config.getNumCPU();
 
@@ -221,6 +221,42 @@ class ScreenManager {
 			file.close();
 
 			cout << "Report successfully generated." << endl;
+		}
+
+		void process_SMI() {
+			cout << "--------------------------------------------\n";
+			cout << "| PROCESS-SMI V01.00 Driver Version: 01.00 |\n";
+			cout << "--------------------------------------------\n";
+
+			int cpu_usage_count = 0;
+			for (int i = 0; i < cores; i++) {
+				if (screens.find(running_queue[i]) == screens.end()) {
+					continue;
+				}
+				cpu_usage_count++;
+			}
+
+			cout << "CPU-Util: " << cpu_usage_count * 100 / cores << "%" << endl;
+			cout << "Memory Usage: " << memoryAllocator.getAllocatedSize() << "MiB / " << memoryAllocator.getMaximumSize() << "MiB\n";
+			cout << "Memory Util: " << memoryAllocator.getAllocatedSize()*100/memoryAllocator.getMaximumSize() << "%\n";
+			
+			cout << "============================================\n";
+			cout << "Running processes and memory usage: \n";
+			cout << "--------------------------------------------\n";
+
+			for (int i = 0; i < cores; i++) {
+				if (screens.find(running_queue[i]) == screens.end()) {
+					continue;
+				}
+
+				ScreenFactory* s = screens[running_queue[i]];
+				if (s->getStatus() == RUNNING) {
+					cout << s->getName() << "\t" << s->getMemoryRequired() << "MiB\n";
+				}
+			}
+
+			cout << "--------------------------------------------\n";
+
 		}
 
 		void printMemory() {
