@@ -5,6 +5,9 @@
 #include <conio.h>
 
 class InputHandler {
+private:
+    vector<string> history;
+    int history_index;
 public:
     static std::string getUserInput() {
         std::cout << "Enter a command: ";
@@ -13,7 +16,20 @@ public:
         while (true) {
             if (_kbhit()) {
                 ch = _getch();
-                if (ch == 13) { // Enter key
+                if (ch == 0 || ch == -32) {// arrow keys
+                    ch = _getch();
+
+                    if (ch == 72) {
+                        //screen ls
+                        for (int i = 0; i < input.size(); i++) {
+                            std::cout << "\b \b";
+                        }
+                        std::cout << "screen -ls";
+                        input = "screen -ls";
+                    }
+                    
+                }
+                else if (ch == 13) { // Enter key
                     std::cout << "\n";
                     break;
                 }

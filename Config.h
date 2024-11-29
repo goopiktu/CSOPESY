@@ -20,10 +20,12 @@ private:
     uint32_t min_ins;  // Range: [1, 2^32]
     uint32_t max_ins;  // Range: [1, 2^32]
     uint32_t delay_per_exec;    // Range: [0, 2^32]
+    
+    uint32_t max_overall_mem; // Range: [1, 2^32]
+    uint32_t mem_per_frame; // Range: [1, 2^32]
+    uint32_t min_mem_per_proc;
+    uint32_t max_mem_per_proc;
 
-    uint32_t max_overall_mem;
-    uint32_t mem_per_frame;
-    uint32_t mem_per_proc;
     bool initialized = false;
 
     static Config* instancePtr;
@@ -50,7 +52,8 @@ public:
 
     uint32_t getMaxOverallMem() const { return max_overall_mem; }
     uint32_t getMemPerFrame() const { return mem_per_frame; }
-    uint32_t getMemPerProc() const { return mem_per_proc; }
+    uint32_t getMinMemPerProc() const { return min_mem_per_proc; }
+    uint32_t getMaxMemPerProc() const { return max_mem_per_proc; }
 };
 
 Config* Config::instancePtr = nullptr;
@@ -71,7 +74,8 @@ void Config::loadConfig(const std::string& filename) {
         {"delay-per-exec", false},
         {"max-overall-mem", false},
         {"mem-per-frame", false},
-        {"mem-per-proc", false}
+        {"max-mem-per-proc", false},
+        {"min-mem-per-proc", false }
     };
 
     std::string param;
@@ -113,8 +117,12 @@ void Config::loadConfig(const std::string& filename) {
             file >> mem_per_frame;
             requiredParams[param] = true;
         }
-        else if (param == "mem-per-proc") {
-            file >> mem_per_proc;
+        else if (param == "max-mem-per-proc") {
+            file >> max_mem_per_proc;
+            requiredParams[param] = true;
+        }
+        else if (param == "min-mem-per-proc") {
+            file >> min_mem_per_proc;
             requiredParams[param] = true;
         }
         else {

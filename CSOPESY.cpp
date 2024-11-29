@@ -64,11 +64,9 @@ FlatMemoryAllocator* memoryAllocator = nullptr;
 
 void initializeScreens() {
     std::cout << "Initializing screens with " << config->getNumCPU() << " CPUs.\n"; // Debug output
-    int RR = 0;
-    if (config->getSchedulerType() == "rr") RR = 1;
 
     memoryAllocator = new FlatMemoryAllocator(config->getMaxOverallMem());
-    screens = new ScreenManager(config->getNumCPU(), config->getDelayPerExec(), config->getQuantumCycles(), RR, *memoryAllocator, config->getMemPerProc(), config->getMemPerFrame());
+    screens = new ScreenManager(*config, *memoryAllocator);
     if (screens) {
         std::cout << "ScreenManager initialized successfully.\n"; // Debug output
     }
@@ -102,7 +100,7 @@ void Screen(std::vector<std::string> inputBuffer) {
                 std::cout << "Screen with the name: [" << name << "] already exists.\n";
             }
             else {
-                screens->addScreen(name, config->getMinIns(), config->getMaxIns());
+                screens->addScreen(name);
                 screens->isInsideScreen(true);
             }
         }
@@ -115,16 +113,16 @@ void Screen(std::vector<std::string> inputBuffer) {
     }
 }
 
-void SchedulerTest(int batch_process_freq, int min_ins, int max_ins) {
+void SchedulerTest(int batch_process_freq) {
     std::cout << "scheduler-test command recognized. Starting process generation.\n";
     if (!making_process.load()) {
         making_process.store(true);
         scheduler_test_thread = std::thread([=]() {
             int process_count = 0;
             while (making_process.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*100));
+                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*config->getDelayPerExec()*100 + 1));
                 std::string process_name = "Process_" + std::to_string(process_count++);
-                screens->addScreen(process_name, min_ins, max_ins);
+                screens->addScreen(process_name);
             }
             });
     }
@@ -211,7 +209,7 @@ void mainThread() {
             break;
 
         case Command::SCHEDULER_TEST:
-            SchedulerTest(config->getBatchProcessFreq(), config->getMinIns(), config->getMaxIns());
+            SchedulerTest(config->getBatchProcessFreq());
             break;
 
         case Command::SCHEDULER_STOP:
@@ -239,7 +237,7 @@ void mainThread() {
 void cpuCycle() {
     while (running) {
         cpu_cycles++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(config->getDelayPerExec()));
+        std::this_thread::sleep_for(std::chrono::milliseconds(config->getDelayPerExec()*100 + 1));
     }
 }
 

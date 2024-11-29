@@ -10,6 +10,7 @@
 #include <thread>
 #include <Windows.h>
 #include "Memory.h"
+#include "Config.h"
 
 class ScreenManager {
 
@@ -38,19 +39,31 @@ class ScreenManager {
 		int timeslice = 0;
 
 		IMemoryAllocator& memoryAllocator;
-		int mem_per_proc = 0;
 		int mem_per_frame = 0;
+
+		size_t min_mem = 0;
+		size_t max_mem = 0;
+
+		size_t min_ins = 0;
+		size_t max_ins = 0;
 
 	public:
 		/*void shutdown() {
 			running = false;
 		}*/
 
-		ScreenManager(int cores, int delay, int timeslice, int RR, IMemoryAllocator& memoryAllocator, int mem_per_proc, int mem_per_frame) : cores(cores), insideScreen(false), memoryAllocator(memoryAllocator) {
-			this->delay = delay;
-			this->timeslice = timeslice;
-			this->mem_per_proc = mem_per_proc;
-			this->mem_per_frame = mem_per_frame;
+		ScreenManager(Config config, IMemoryAllocator& memoryAllocator) : memoryAllocator(memoryAllocator) {
+		
+			this->delay = config.getDelayPerExec();
+			this->timeslice = config.getQuantumCycles();
+			this->mem_per_frame = config.getMemPerFrame();
+			this->max_mem = config.getMaxMemPerProc();
+			this->min_mem = config.getMinMemPerProc();
+
+			this->max_mem = config.getMaxIns();
+			this->min_mem = config.getMinIns();
+
+			this->cores = config.getNumCPU();
 
 
 			for (int i = 0; i < cores; i++) {
@@ -62,7 +75,7 @@ class ScreenManager {
 
 			/*--- Initialize Cores ---*/
 			for (int i = 0; i < cores; i++) {
-				if (RR == 1) {
+				if (config.getSchedulerType() == "rr") {
 					core_threads.push_back(std::thread(&ScreenManager::coreJob_RR, this, i));
 				}
 				else {
@@ -89,8 +102,8 @@ class ScreenManager {
 		}
 
 
-		void addScreen(string name, int min_ins, int max_ins) {
-			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins, mem_per_proc);
+		void addScreen(string name) {
+			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins, min_mem, max_mem);
 			{
 				std::lock_guard<std::mutex> lock(screens_mutex);
 				screens[name] = screen;
@@ -210,9 +223,8 @@ class ScreenManager {
 			cout << "Report successfully generated." << endl;
 		}
 
-		int quantum_time = 0;
 		void printMemory() {
-			ofstream file = ofstream("memlogs/memory_stamp_" + std::to_string(quantum_time) + ".txt");
+			ofstream file = ofstream("memlogs/memory_stamp_" + std::to_string(cpu_cycles) + ".txt");
 
 
 			time_t now = time(0);
@@ -225,7 +237,7 @@ class ScreenManager {
 
 			file << "Timestamp" << output << endl;
 			
-			file << "Number of processes in memory: " << memoryAllocator.getAllocatedSize() / mem_per_proc << endl;
+			file << "Number of processes in memory: " << memoryAllocator.getAllocatedSize() << endl;
 			file << "Total external fragmentation in KB: " << memoryAllocator.getMaximumSize() - memoryAllocator.getAllocatedSize() << endl;
 
 			file << "----end---- = " << memoryAllocator.getMaximumSize() << "\n\n";
@@ -243,7 +255,6 @@ class ScreenManager {
 			}
 
 			file << "---start--- = 0\n\n";
-			quantum_time++;
 		}
 
 		void coreJob(int i) {
@@ -395,7 +406,8 @@ class ScreenManager {
 				 
 				if(change) printMemory();
 				//listScreens();
-
+				Sleep(delay * 100 + 1);
+				cpu_cycles++;
 			/*	std::cout << "RQ: " << ready_queue.size(); */
 			}
 		}

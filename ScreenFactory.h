@@ -29,13 +29,13 @@ class ScreenFactory
 		ofstream file;
 	
 	public:
-		ScreenFactory(string name, int min_ins, int max_ins, size_t memoryRequired) {
+		ScreenFactory(string name, int min_ins, int max_ins, size_t min_mem, size_t max_mem) {
 			this->name = name;
 			this->lineOfInstruction = 0;
-			this->memoryRequired = memoryRequired;
 
 			setTotalLineofInstruction(min_ins, max_ins);
-		
+			setRequiredMemory( min_mem, max_mem);
+
 			this->status = READY;
 			this->file = ofstream("output/" + name + ".txt");
 
@@ -105,6 +105,12 @@ class ScreenFactory
 			int range = max_ins - min_ins + 1;
 			int num = rand() % range + min_ins;
 			this->totalLineofInstruction = num;
+		}
+
+		void setRequiredMemory(size_t min_mem, size_t max_mem) {
+			size_t range = max_mem - min_mem + 1;
+			size_t num = rand() % range + min_mem;
+			this->memoryRequired = num;
 		}
 
 
