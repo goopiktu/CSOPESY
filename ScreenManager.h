@@ -310,7 +310,7 @@ class ScreenManager {
 					screens[screen_name]->print(i);
 				}
 
-				Sleep(delay*10+1);
+				Sleep(delay*10+ 10);
 			}
 		}
 
@@ -362,7 +362,7 @@ class ScreenManager {
 				counter++;
 				
 				
-				Sleep(delay * 10 + 1);
+				Sleep(delay * 10 + 10);
 			}
 		}
 
@@ -502,7 +502,7 @@ class ScreenManager {
 				//listScreens();
 
 				
-				Sleep(delay * 10 + 1);
+				Sleep(10);
 				cpu_cycles++;
 				if (ran)active_cpu_cycles++;
 			/*	std::cout << "RQ: " << ready_queue.size(); */

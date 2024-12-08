@@ -33,7 +33,6 @@ std::string green = "\033[32m";
 std::string reset = "\033[0m";
 std::string yellow = "\033[38;5;229m";
 
-int cpu_cycles = 0;
 std::atomic<bool> running{ true };
 std::atomic<bool> initialized(false);  // Track initialization status
 Config* config = Config::getInstance();
@@ -44,7 +43,6 @@ void cpuCycle();
 
 std::thread main_worker(mainThread);
 std::thread scheduler_test_thread;
-std::thread cpu_cycle(cpuCycle);
 std::atomic<bool> making_process(false);
 
 // Clear screen function
@@ -130,7 +128,7 @@ void SchedulerTest(int batch_process_freq) {
         scheduler_test_thread = std::thread([=]() {
             int process_count = 0;
             while (making_process.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*config->getDelayPerExec()*10 + 1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*10));
                 std::string process_name = "Process_" + std::to_string(process_count++);
                 screens->addScreen(process_name);
             }
@@ -247,19 +245,8 @@ void mainThread() {
     }
 }
 
-
-
-void cpuCycle() {
-    while (running) {
-        cpu_cycles++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(config->getDelayPerExec()*100 + 1));
-    }
-}
-
 int main() {
-    std::thread cpu_cycle(cpuCycle); // Create CPU cycle thread
     main_worker.join();
-    cpu_cycle.join(); // Wait for CPU cycle thread to finish
 
     return 0;
 }
