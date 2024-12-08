@@ -15,6 +15,13 @@ enum Status {
 	TERMINATED
 };
 
+enum MEMSTATE {
+	NOT_ALLOCATED,
+	IN_MEMORY,
+	IN_BACKING_STORE
+};
+
+
 class ScreenFactory
 {
 	private:
@@ -24,13 +31,16 @@ class ScreenFactory
 		int totalLineofInstruction;
 		Status status;
 		size_t memoryRequired;
-		void* memoryAddress;
+		size_t id;
 
 		ofstream file;
+		MEMSTATE memState = NOT_ALLOCATED;
+		size_t last_in_mem = 0;
 	
 	public:
-		ScreenFactory(string name, int min_ins, int max_ins, size_t min_mem, size_t max_mem) {
+		ScreenFactory(string name, int min_ins, int max_ins, size_t min_mem, size_t max_mem, size_t id) {
 			this->name = name;
+			this->id = id;
 			this->lineOfInstruction = 0;
 
 			setTotalLineofInstruction(min_ins, max_ins);
@@ -59,6 +69,22 @@ class ScreenFactory
 			status = s;
 		}
 
+		void setMemState(MEMSTATE s) {
+			memState = s;
+		}
+
+		MEMSTATE getMemState() {
+			return memState;
+		}
+
+		void setLastTimeMem(size_t cpu_cycle) {
+			last_in_mem = cpu_cycle;
+		}
+
+		size_t getLastTimeMem() {
+			return last_in_mem;
+		}
+
 		int getLineOfInstruction() const {
 			return lineOfInstruction;
 		}
@@ -71,13 +97,7 @@ class ScreenFactory
 			return memoryRequired;
 		}
 
-		void setMemoryAddress(void* addr) {
-			this->memoryAddress = addr;
-		}
-
-		void* getMemoryAddress() {
-			return memoryAddress;
-		}
+		size_t getID() const { return id; }
 
 		void print(int core) {
 			if (status == RUNNING) {

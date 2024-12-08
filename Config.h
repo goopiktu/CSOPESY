@@ -150,7 +150,7 @@ void Config::validateParameters() {
         throw ConfigException("Invalid scheduler type (must be either 'fcfs' or 'rr'): " + scheduler_type);
     }
 
-    if (quantum_cycles < 1) {
+    if ((quantum_cycles < 1) && (scheduler_type == "rr")) {
         throw ConfigException("Invalid quantum cycles (must be at least 1): " + std::to_string(quantum_cycles));
     }
 

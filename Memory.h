@@ -5,154 +5,148 @@
 
 class IMemoryAllocator {
 public:
-	virtual void* allocate(size_t size) = 0;
-	virtual void deallocate(void* ptr, size_t size) = 0;
-	virtual std::string visualizeMemory() = 0;
+	virtual bool allocate(size_t size, int id) = 0;
+	virtual void deallocate(int id) = 0;
 
 	virtual size_t getMaximumSize() = 0;
 	virtual size_t getAllocatedSize() = 0;
+
+	virtual size_t getMaxFrames() = 0;
+	virtual size_t getFrameIn() = 0;
 
 };
 
 class FlatMemoryAllocator : public IMemoryAllocator {
 private:
 	size_t maximumSize;
-	size_t allocatedSize;
-	std::vector<char> memory;
-	std::vector<bool> allocationMap;
+	size_t allocatedSize = 0;
+	std::vector<int> allocationMap;
 	//std::unordered_map<size_t, bool> allocationMap;
 
-	void initializeMemory(size_t maximumSize) {
+	void initializeMemory() {
 		for (size_t i = 0; i < maximumSize; i++) {
-			memory.push_back('.');
-			allocationMap.push_back(false);
+			allocationMap.push_back(-1);
 		}
-		//std::fill(memory.begin(), memory.end(), '.'); // '.' means unallocated memory
-		//std::fill(allocationMap.begin(), allocationMap.end(), false);
 	}
 
-	bool canAllocateAt(size_t index, size_t size) const {
-		return (index + size <= maximumSize);
-	}
-
-	void allocateAt(size_t index, size_t size) {
+	bool canAllocateAt(size_t index, size_t size) {
+		
 		for (size_t i = index; i < index + size; i++) {
-			allocationMap[i] = true;
+			if (allocationMap[i] != -1) return false;
+		}
+		return true;
+	}
+
+	void allocateAt(size_t index, size_t size, int id) {
+		for (size_t i = index; i < index + size; i++) {
+			allocationMap[i] = id;
 		}
 		allocatedSize += size;
 	}
 
-	void deallocateAt(size_t index, size_t size) {
-		allocationMap[index] = false;
-		allocatedSize -= size;
-	}
+	
 
 public:
 	size_t getMaximumSize() override { return maximumSize; }
 	size_t getAllocatedSize() override { return allocatedSize; }
 
-	FlatMemoryAllocator(size_t maximumSize) : maximumSize(maximumSize), allocatedSize(0) {
-		initializeMemory(maximumSize);
+	size_t getMaxFrames() override { return 0; }
+	size_t getFrameIn() override { return 0; }
+
+	FlatMemoryAllocator(size_t maximumSize) : maximumSize(maximumSize){
+		initializeMemory();
 	}
 
 	~FlatMemoryAllocator() {
-		memory.clear();
+		allocationMap.clear();
 	}
 
-	void* allocate(size_t size) override {
+	bool allocate(size_t size, int id) override {
 
-		for (size_t i = 0; i < maximumSize - size + 1; ++i) {
-			if (!allocationMap[i] && canAllocateAt(i, size)) {
-				allocateAt(i, size);
-				return &memory[i];
+		for (int i = 0; i < maximumSize - size + 1; ++i) {
+			if (canAllocateAt(i, size)) {
+				allocateAt(i, size, id);
+				return true;
 			}
 		}
 
-		return nullptr;
+		return false;
 	}
 
-	void deallocate(void* ptr, size_t size) override {
-		size_t index = static_cast<char*>(ptr) - &memory[0];
-		if (allocationMap[index]) {
-			deallocateAt(index, size);
-			
+	void deallocate(int id) override{
+		for (size_t i = 0; i < maximumSize; i++) {
+			if (allocationMap[i] == id) {
+				allocationMap[i] = -1;
+				allocatedSize--;
+			}
 		}
-	}
-
-	std::string visualizeMemory() override {
-		return std::string(memory.begin(), memory.end());
 	}
 };
 
 
 class PagingAllocator : public IMemoryAllocator {
 private:
-	size_t maxMemorySize;
+	size_t maximumSize;
 	size_t frameSize;
-	size_t numFrames;
-	std::vector<size_t> memory;                         // Memory as frames
-	std::unordered_map<size_t, std::vector<size_t>> processFrameMap; // Tracks frames per process
-	std::vector<size_t> freeFrameList;                  // List of free frames
+	size_t num_frames;
 
-	size_t allocateFrames(size_t numFrames, size_t processId) {
-		if (numFrames > freeFrameList.size()) {
-			throw std::runtime_error("Not enough free frames.");
+	std::vector<int> allocationMap;
+	std::queue<int> freeFrameList;
+
+	void initializeMemory() {
+		for (size_t i = 0; i < num_frames; i++) {
+			allocationMap.push_back(-1);
+			freeFrameList.push(i);
 		}
-
-		std::vector<size_t> allocatedFrames;
-		for (size_t i = 0; i < numFrames; ++i) {
-			size_t frameIndex = freeFrameList.back();
-			freeFrameList.pop_back();
-			allocatedFrames.push_back(frameIndex);
-			memory[frameIndex] = processId; // Mark frame as occupied
-		}
-
-		processFrameMap[processId] = allocatedFrames;
-		return allocatedFrames[0];
 	}
 
-	void deallocateFrames(size_t processId) {
-		if (processFrameMap.find(processId) == processFrameMap.end()) {
-			throw std::runtime_error("Process ID not found.");
-		}
-
-		for (size_t frameIndex : processFrameMap[processId]) {
-			memory[frameIndex] = 0;
-			freeFrameList.push_back(frameIndex);
-		}
-
-		processFrameMap.erase(processId);
+	bool canAllocateAt(size_t numFramesNeeded) {
+		
+		return (freeFrameList.size() >= numFramesNeeded);
 	}
+
+	void allocateAt(size_t numFramesNeeded, int id) {
+		for (size_t i = 0; i < numFramesNeeded; i++) {
+			int index = freeFrameList.front();
+			freeFrameList.pop();
+			allocationMap[index] = id;
+		}
+	}
+
+
 
 public:
-	PagingAllocator(size_t maxMemorySize, size_t frameSize)
-		: maxMemorySize(maxMemorySize), frameSize(frameSize),
-		numFrames(maxMemorySize / frameSize), memory(numFrames, 0) {
-		for (size_t i = 0; i < numFrames; ++i) {
-			freeFrameList.push_back(i);
+	size_t getMaximumSize() override { return maximumSize; }
+	size_t getAllocatedSize() override { return frameSize * (num_frames-freeFrameList.size()); }
+
+	size_t getMaxFrames() override { return num_frames; }
+	size_t getFrameIn() override { return (num_frames - freeFrameList.size()); }
+
+	PagingAllocator(size_t maximumSize, size_t frameSize) : maximumSize(maximumSize), frameSize(frameSize), num_frames(maximumSize/ frameSize){
+		initializeMemory();
+	}
+
+	~PagingAllocator() {
+		allocationMap.clear();
+	}
+
+	bool allocate(size_t size, int id) override {
+		int frames_needed = 1 + ((size - 1) / frameSize);
+
+		if (canAllocateAt(frames_needed)) {
+			allocateAt(frames_needed, id);
+			return true;
+		}
+
+		return false;
+	}
+
+	void deallocate(int id) override {
+		for (size_t i = 0; i < num_frames; i++) {
+			if (allocationMap[i] == id) {
+				allocationMap[i] = -1;
+				freeFrameList.push(i); //return index to freeFrameList
+			}
 		}
 	}
-
-	void* allocate(size_t size) override {
-		size_t numFramesNeeded = (size + frameSize - 1) / frameSize;
-		size_t processId = size; 
-		return reinterpret_cast<void*>(allocateFrames(numFramesNeeded, processId));
-	}
-
-	void deallocate(void* ptr, size_t size) override {
-		size_t processId = size; 
-		deallocateFrames(processId);
-	}
-
-	size_t getMaximumSize() override {
-		return maxMemorySize;
-	}
-
-	size_t getAllocatedSize() override {
-		return (numFrames - freeFrameList.size()) * frameSize;
-	}
-
-	std::string visualizeMemory() override {
-		return std::string(memory.begin(), memory.end());
-	} 
 };

@@ -23,11 +23,12 @@ class ScreenManager {
 		std::vector <thread> core_threads;
 		std::thread manager_thread;
 		int cores;
-		bool insideScreen;
+		bool insideScreen = false;
 
 		atomic<bool> running = true;
 
-		int cpu_cycles = 0;
+		size_t cpu_cycles = 0;
+		size_t active_cpu_cycles = 0;
 
 		// MUTEX LOCKS
 		std::mutex screens_mutex;
@@ -47,13 +48,21 @@ class ScreenManager {
 		size_t min_ins = 0;
 		size_t max_ins = 0;
 
+		size_t curr_id = 0;
+
+		ofstream backingStore;
+
 	public:
 		/*void shutdown() {
 			running = false;
 		}*/
 
 		ScreenManager(Config& config, IMemoryAllocator& memoryAllocator) : memoryAllocator(memoryAllocator) {
-		
+			
+			backingStore.open("backingStore.txt");
+			backingStore << "";//initialize backing store
+			backingStore.close();
+
 			this->delay = config.getDelayPerExec();
 			this->timeslice = config.getQuantumCycles();
 			this->mem_per_frame = config.getMemPerFrame();
@@ -103,7 +112,7 @@ class ScreenManager {
 
 
 		void addScreen(string name) {
-			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins, min_mem, max_mem);
+			ScreenFactory* screen = new ScreenFactory(name, min_ins, max_ins, min_mem, max_mem, curr_id);
 			{
 				std::lock_guard<std::mutex> lock(screens_mutex);
 				screens[name] = screen;
@@ -112,7 +121,7 @@ class ScreenManager {
 				std::lock_guard<std::mutex> lock(ready_queue_mutex);
 				ready_queue.push(screen);
 			}
-			//cout << "Screen '" << name << "' created." << endl;
+			curr_id += 1;
 		}
 
 		void displayScreen(string name) {	
@@ -138,13 +147,16 @@ class ScreenManager {
 		}
 
 		void listScreens() {
+			std::lock_guard<std::mutex> lock(running_queue_mutex);
 			int cpu_usage_count = 0;
 			for (int i = 0; i < cores; i++) {
 				if (screens.find(running_queue[i]) == screens.end()) {
 					continue;
 				}
 
-				cpu_usage_count++;
+				if (screens[running_queue[i]]->getStatus() == RUNNING) {
+					cpu_usage_count++;
+				}
 			}
 
 			cout << "CPU: " << cpu_usage_count * 100 / cores  <<"%"<< endl;
@@ -158,9 +170,9 @@ class ScreenManager {
 				}
 
 				ScreenFactory* s = screens[running_queue[i]];
-				
-				cout << s->getName() << "\t" << s->getTime() << "\tCore:"<<i<<"\t" << s->getLineOfInstruction() << " / " << s->getTotalLineofInstruction() << "\n";
-
+				if (s->getStatus() == RUNNING) {
+					cout << s->getName() << "\t" << s->getTime() << "\tCore:" << i << "\t" << s->getLineOfInstruction() << " / " << s->getTotalLineofInstruction() << "\n";
+				}
 			}
 
 			cout << "\nFinished processes: \n";
@@ -178,6 +190,7 @@ class ScreenManager {
 		}
 
 		void report_util() {
+			std::lock_guard<std::mutex> lock(running_queue_mutex);
 			ofstream file = ofstream("report.txt");
 
 			int cpu_usage_count = 0;
@@ -186,7 +199,9 @@ class ScreenManager {
 					continue;
 				}
 
-				cpu_usage_count++;
+				if (screens[running_queue[i]]->getStatus() == RUNNING) {
+					cpu_usage_count++;
+				}
 			}
 
 			file << "CPU: " << cpu_usage_count * 100 / cores << "%" << endl;
@@ -224,6 +239,8 @@ class ScreenManager {
 		}
 
 		void process_SMI() {
+			std::lock_guard<std::mutex> lock(running_queue_mutex);
+
 			cout << "--------------------------------------------\n";
 			cout << "| PROCESS-SMI V01.00 Driver Version: 01.00 |\n";
 			cout << "--------------------------------------------\n";
@@ -233,12 +250,16 @@ class ScreenManager {
 				if (screens.find(running_queue[i]) == screens.end()) {
 					continue;
 				}
-				cpu_usage_count++;
+
+				if (screens[running_queue[i]]->getStatus() == RUNNING) {
+					cpu_usage_count++;
+				}
+				
 			}
 
-			cout << "CPU-Util: " << cpu_usage_count * 100 / cores << "%" << endl;
-			cout << "Memory Usage: " << memoryAllocator.getAllocatedSize() << "MiB / " << memoryAllocator.getMaximumSize() << "MiB\n";
-			cout << "Memory Util: " << memoryAllocator.getAllocatedSize()*100/memoryAllocator.getMaximumSize() << "%\n";
+			cout << "CPU-Util:\t" << cpu_usage_count * 100 / cores << "%" << endl;
+			cout << "Memory Usage:\t" << memoryAllocator.getAllocatedSize() << "KB / " << memoryAllocator.getMaximumSize() << "KB\n";
+			cout << "Memory Util:\t" << memoryAllocator.getAllocatedSize()*100/memoryAllocator.getMaximumSize() << "%\n";
 			
 			cout << "============================================\n";
 			cout << "Running processes and memory usage: \n";
@@ -251,46 +272,28 @@ class ScreenManager {
 
 				ScreenFactory* s = screens[running_queue[i]];
 				if (s->getStatus() == RUNNING) {
-					cout << s->getName() << "\t" << s->getMemoryRequired() << "MiB\n";
+					cout << s->getName() << "\t" << s->getMemoryRequired() << "KB\n";
 				}
+				
+				
 			}
 
 			cout << "--------------------------------------------\n";
 
 		}
 
-		void printMemory() {
-			ofstream file = ofstream("memlogs/memory_stamp_" + std::to_string(cpu_cycles) + ".txt");
+		void vmstat() {
+			cout << "Total Memory:\t" << memoryAllocator.getMaximumSize() << " KB\n";
+			cout << "Used Memory:\t" << memoryAllocator.getAllocatedSize() << " KB\n";
+			cout << "Free Memory:\t" << memoryAllocator.getMaximumSize() - memoryAllocator.getAllocatedSize() << " KB\n";
+
+			cout << "Idle CPU Ticks:\t" << cpu_cycles - active_cpu_cycles << "\n";
+			cout << "Active CPU Ticks:\t" << active_cpu_cycles << "\n";
+			cout << "Total CPU Ticks:\t" << cpu_cycles << "\n";
 
 
-			time_t now = time(0);
-			tm localTime;
-			localtime_s(&localTime, &now);
-
-			char output[50];
-
-			strftime(output, 50, "(%m/%d/%y %H:%M:%S %p)", &localTime);
-
-			file << "Timestamp" << output << endl;
-			
-			file << "Number of processes in memory: " << memoryAllocator.getAllocatedSize() << endl;
-			file << "Total external fragmentation in KB: " << memoryAllocator.getMaximumSize() - memoryAllocator.getAllocatedSize() << endl;
-
-			file << "----end---- = " << memoryAllocator.getMaximumSize() << "\n\n";
-
-			for (int i = 0; i < cores; i++) {
-				if (screens.find(running_queue[i]) == screens.end()) {
-					file << "---\nIDLE\n---\n\n";
-					continue;
-				}
-
-				ScreenFactory* s = screens[running_queue[i]];
-				
-				//size_t base = memoryAllocator.ptr_to_index(s->getMemoryAddress());
-				//file << (base + s->getMemoryRequired())-1 << "\n" << s->getName() << endl << base << "\n\n";
-			}
-
-			file << "---start--- = 0\n\n";
+			cout << "# Paged-In:\t" << memoryAllocator.getFrameIn() << "\n";
+			cout << "# Paged-Out:\t" << memoryAllocator.getMaxFrames() - memoryAllocator.getFrameIn() << "\n";
 		}
 
 		void coreJob(int i) {
@@ -307,7 +310,7 @@ class ScreenManager {
 					screens[screen_name]->print(i);
 				}
 
-				Sleep(delay*100+1); // Adjust this as needed
+				Sleep(delay*10+1);
 			}
 		}
 
@@ -340,22 +343,12 @@ class ScreenManager {
 				// Current process has reached allotted time slice
 				if (counter >= time_slice) {
 
-					if (ready_queue.empty()) {
-						
-						counter = 0;
-						continue;
-					}
-
-					if (screens[screen_name]->getStatus() != TERMINATED) {
+					if (!ready_queue.empty() && (screens[screen_name]->getStatus() != TERMINATED)) {
 						{	// Change status to ready 
 							std::lock_guard<std::mutex> lock(screens_mutex);
 							screens[screen_name]->setStatus(WAITING);
 						}
 
-						{	// Requeue process
-							std::lock_guard<std::mutex> lock(ready_queue_mutex);
-							ready_queue.push(screens[screen_name]);
-						}
 					}
 					
 					counter = 0;
@@ -369,15 +362,15 @@ class ScreenManager {
 				counter++;
 				
 				
-				Sleep(delay * 100 + 1);
+				Sleep(delay * 10 + 1);
 			}
 		}
 
 		std::string findFirst() {
 			std::string next_up = "";
-			std::lock_guard<std::mutex> lock(ready_queue_mutex);
-
+			
 			if (!ready_queue.empty()) {
+				std::lock_guard<std::mutex> lock(ready_queue_mutex);
 				ScreenFactory* process = ready_queue.front();
 				ready_queue.pop();
 				next_up = process->getName();
@@ -385,9 +378,34 @@ class ScreenManager {
 			return next_up;
 		}
 
+		bool removeOldest() {
+			//find oldest screen
+			size_t lowest_cycle = 10000000000000;
+			ScreenFactory* oldest_screen = nullptr;
+
+			for (auto& s : screens) {
+				if (s.second->getStatus() == WAITING && s.second->getMemState() == IN_MEMORY){
+					if (s.second->getLastTimeMem() < lowest_cycle) {
+						lowest_cycle = s.second->getLastTimeMem();
+						oldest_screen = s.second;
+					}
+				}
+			}
+			if (oldest_screen == nullptr) return false;
+
+			oldest_screen->setMemState(IN_BACKING_STORE);
+			//write to file
+			backingStore.open("backingStore.txt",fstream::app);
+			backingStore << oldest_screen->getName() << endl;
+			backingStore.close();
+
+			memoryAllocator.deallocate(oldest_screen->getID());
+			return true;
+		}
+
 		void managerJob() {
 			while (running) {
-				bool change = false;
+				bool ran = false;
 				for (int i = 0; i < cores; i++) {
 					std::string next_up;
 					{
@@ -397,9 +415,18 @@ class ScreenManager {
 						std::lock(lock_screens, lock_running); // Lock both mutexes
 						if (screens.find(running_queue[i]) == screens.end() || screens[running_queue[i]]->getStatus() != RUNNING) { 
 							//dealloc finished process
-							if (screens.find(running_queue[i]) != screens.end() && screens[running_queue[i]]->getStatus() == TERMINATED) {
-								void* addr = screens[running_queue[i]]->getMemoryAddress();
-								memoryAllocator.deallocate(addr, screens[running_queue[i]]->getMemoryRequired());
+							if (screens.find(running_queue[i]) != screens.end()) { //if something in CPU
+								
+								if (screens[running_queue[i]]->getStatus() == TERMINATED) {
+									size_t id = screens[running_queue[i]]->getID();
+									memoryAllocator.deallocate(id);
+									screens[running_queue[i]]->setMemState(NOT_ALLOCATED);
+								}
+
+								if (screens[running_queue[i]]->getStatus() == WAITING) {
+									ready_queue.push(screens[running_queue[i]]);
+									running_queue[i] = "";
+								}
 							}
 							
 							{
@@ -407,14 +434,12 @@ class ScreenManager {
 								next_up = findFirst();
 							}
 							if (next_up == "") {
-								running_queue[i] = "";
+								running_queue[i] = ""; //nothing ready, so just clear it.
 								continue;
 							};
 
-							change = true;
-							
-							if (screens[next_up]->getStatus() == WAITING) {
-								//if process has already been allocated / from waiting
+							if (screens[next_up]->getStatus() == WAITING && screens[next_up]->getMemState() == IN_MEMORY) {
+								//if process has already been memallocated / from waiting
 								screens[next_up]->setStatus(RUNNING);
 								running_queue[i] = next_up;
 								
@@ -422,28 +447,64 @@ class ScreenManager {
 							}
 
 							//allocate memory
-							void* mem = memoryAllocator.allocate(screens[next_up]->getMemoryRequired());
-							if (mem != nullptr) {
+							try_to_allocate_again:
+							if (memoryAllocator.allocate(screens[next_up]->getMemoryRequired(), screens[next_up]->getID())) {
 								//theres memory!
-								screens[next_up]->setMemoryAddress(mem);
+								if (screens[next_up]->getMemState() == IN_BACKING_STORE) {
+									//TODO: remove from backing store
+									ifstream file("backingStore.txt");
+									string str;
+									string file_contents;
+
+									while (std::getline(file, str))
+									{
+										//dont include the one we want to remove
+										if (str != screens[next_up]->getName()) { 
+											file_contents += str;
+											file_contents.push_back('\n');
+										}
+									}
+									file.close();
+
+									//override backing store with new list
+									backingStore.open("backingStore.txt");
+									backingStore << file_contents;
+									backingStore.close();
+
+								}
+
 								screens[next_up]->setStatus(RUNNING);
+								screens[next_up]->setMemState(IN_MEMORY);
+								screens[next_up]->setLastTimeMem(cpu_cycles); //to know which is the oldest
+
 								running_queue[i] = next_up;
 							}
 							else {
-								//boo try again
-								screens[next_up]->setStatus(READY);
-								ready_queue.push(screens[next_up]);
+								if (removeOldest()) {
+									//something in memory was successfully removed
+									goto try_to_allocate_again;
+								}
+								else {
+									//nothing left to remove
+									screens[next_up]->setStatus(READY);
+									ready_queue.push(screens[next_up]);
+								}
 							}
 
 							continue;
 						} // ENDIF
+						else { //will run if at least one cpu is running 
+							ran = true;
+						}
 					} //END MUTEX LOCK
 				}// ENDFORLOOP
-				 
-				if(change) printMemory();
+				
 				//listScreens();
-				Sleep(delay * 100 + 1);
+
+				
+				Sleep(delay * 10 + 1);
 				cpu_cycles++;
+				if (ran)active_cpu_cycles++;
 			/*	std::cout << "RQ: " << ready_queue.size(); */
 			}
 		}

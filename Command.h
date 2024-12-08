@@ -9,6 +9,7 @@ enum class Command {
     CLEAR,
     REPORT_UTIL,
     PROCESS_SMI,
+    VMSTAT,
     INVALID // For unrecognized commands
 };
 

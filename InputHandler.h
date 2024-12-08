@@ -19,13 +19,22 @@ public:
                 if (ch == 0 || ch == -32) {// arrow keys
                     ch = _getch();
 
-                    if (ch == 72) {
+                    if (ch == 72) { //up
                         //screen ls
                         for (int i = 0; i < input.size(); i++) {
                             std::cout << "\b \b";
                         }
                         std::cout << "screen -ls";
                         input = "screen -ls";
+                    }
+
+                    if (ch == 80) { //down
+                        //screen ls
+                        for (int i = 0; i < input.size(); i++) {
+                            std::cout << "\b \b";
+                        }
+                        std::cout << "process-smi";
+                        input = "process-smi";
                     }
                     
                 }

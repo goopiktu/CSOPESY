@@ -21,7 +21,8 @@ Command getCommandFromString(const std::string& commandStr) {
         {"scheduler-stop", Command::SCHEDULER_STOP},
         {"clear", Command::CLEAR},
         {"report-util", Command::REPORT_UTIL},
-        {"process-smi", Command::PROCESS_SMI}
+        {"process-smi", Command::PROCESS_SMI},
+        {"vmstat", Command::VMSTAT}
     };
 
     auto it = commandMap.find(commandStr);
@@ -129,7 +130,7 @@ void SchedulerTest(int batch_process_freq) {
         scheduler_test_thread = std::thread([=]() {
             int process_count = 0;
             while (making_process.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*config->getDelayPerExec()*100 + 1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(batch_process_freq*config->getDelayPerExec()*10 + 1));
                 std::string process_name = "Process_" + std::to_string(process_count++);
                 screens->addScreen(process_name);
             }
@@ -234,6 +235,9 @@ void mainThread() {
             break;
         case Command::PROCESS_SMI:
             screens->process_SMI();
+            break;
+        case Command::VMSTAT:
+            screens->vmstat();
             break;
         case Command::INVALID:
         default:
