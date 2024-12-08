@@ -21,6 +21,7 @@ Once ready,  enter the `initialize` command to prepare the simulation.
 The program uses a text-based input system. Simply type in the command and hit enter to confirm.
 
 The following commands are available to the user:
+- `exit`: safely closes the application.
 - `initialize`: reads the config file and prepares the CPU and memory.
 - `screen -s [screen_name]`: creates a new process with screen_name. screen_name must be unique.
 - `screen -r [screen_name]`: restores a new process with screen_name. screen_name must be unique.
