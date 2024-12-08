@@ -357,11 +357,9 @@ class ScreenManager {
 
 				if (screens[screen_name]->getStatus() == RUNNING) {
 					screens[screen_name]->print(i);
+					counter++;
 				}
-				
-				counter++;
-				
-				
+
 				Sleep(delay * 10 + 10);
 			}
 		}
@@ -421,6 +419,7 @@ class ScreenManager {
 									size_t id = screens[running_queue[i]]->getID();
 									memoryAllocator.deallocate(id);
 									screens[running_queue[i]]->setMemState(NOT_ALLOCATED);
+									running_queue[i] = "";
 								}
 
 								if (screens[running_queue[i]]->getStatus() == WAITING) {
