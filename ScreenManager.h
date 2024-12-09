@@ -282,6 +282,8 @@ class ScreenManager {
 
 		}
 
+		size_t frame_in = 0;
+		size_t frame_out = 0;
 		void vmstat() {
 			cout << "Total Memory:\t" << memoryAllocator.getMaximumSize() << " KB\n";
 			cout << "Used Memory:\t" << memoryAllocator.getAllocatedSize() << " KB\n";
@@ -292,8 +294,8 @@ class ScreenManager {
 			cout << "Total CPU Ticks:\t" << cpu_cycles << "\n";
 
 
-			cout << "# Paged-In:\t" << memoryAllocator.getFrameIn() << "\n";
-			cout << "# Paged-Out:\t" << memoryAllocator.getMaxFrames() - memoryAllocator.getFrameIn() << "\n\n";
+			cout << "# Paged-In:\t" << frame_in << "\n";
+			cout << "# Paged-Out:\t" << frame_out<< "\n\n";
 		}
 
 		void coreJob(int i) {
@@ -393,9 +395,11 @@ class ScreenManager {
 
 			oldest_screen->setMemState(IN_BACKING_STORE);
 			//write to file
+
 			backingStore.open("backingStore.txt",fstream::app);
 			backingStore << oldest_screen->getName() << endl;
 			backingStore.close();
+			frame_out++;
 
 			memoryAllocator.deallocate(oldest_screen->getID());
 			return true;
@@ -420,9 +424,8 @@ class ScreenManager {
 									memoryAllocator.deallocate(id);
 									screens[running_queue[i]]->setMemState(NOT_ALLOCATED);
 									running_queue[i] = "";
-								}
-
-								if (screens[running_queue[i]]->getStatus() == WAITING) {
+									frame_out++;
+								}else if (screens[running_queue[i]]->getStatus() == WAITING) {
 									ready_queue.push(screens[running_queue[i]]);
 									running_queue[i] = "";
 								}
@@ -461,6 +464,7 @@ class ScreenManager {
 										if (str != screens[next_up]->getName()) { 
 											file_contents += str;
 											file_contents.push_back('\n');
+											
 										}
 									}
 									file.close();
@@ -469,13 +473,13 @@ class ScreenManager {
 									backingStore.open("backingStore.txt");
 									backingStore << file_contents;
 									backingStore.close();
-
+									
 								}
 
 								screens[next_up]->setStatus(RUNNING);
 								screens[next_up]->setMemState(IN_MEMORY);
 								screens[next_up]->setLastTimeMem(cpu_cycles); //to know which is the oldest
-
+								frame_in++;
 								running_queue[i] = next_up;
 							}
 							else {
