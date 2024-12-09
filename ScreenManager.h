@@ -293,7 +293,7 @@ class ScreenManager {
 
 
 			cout << "# Paged-In:\t" << memoryAllocator.getFrameIn() << "\n";
-			cout << "# Paged-Out:\t" << memoryAllocator.getMaxFrames() - memoryAllocator.getFrameIn() << "\n";
+			cout << "# Paged-Out:\t" << memoryAllocator.getMaxFrames() - memoryAllocator.getFrameIn() << "\n\n";
 		}
 
 		void coreJob(int i) {
