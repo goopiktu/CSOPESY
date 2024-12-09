@@ -45,5 +45,5 @@ The following files are described below:
 - [`Command.h`](Command.h): Contains the ENUM class holding the list of the valid commands.
 - [`backingStore.txt`](backingStore.txt): The simulated backing store that contains a list of all processes currently in the backing store, each process on its own line.
 - [`report.txt`](report.txt): File outputed by the system when running the `report-util` command.
-- [`output`](output): Folder containing files written to by each process.
+- [`output`](output): Folder containing files written to by each running process. Each file is generated with the naming convention `[process_name].txt`.
 
