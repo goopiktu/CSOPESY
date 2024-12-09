@@ -29,8 +29,21 @@ The following commands are available to the user:
 - `scheduler-test`: Begins the scheduler test, creating a new process every timespan based on batch-process-freq.
 - `scheduler-stop`: Stops the scheduler test.
 - `clear`: Clears the screen.
-- `report-util`: Similar to screen -ls, but saves to a text file.
+- `report-util`: Similar to screen -ls, but saves to the [`report.txt`](report.txt) file.
 - `process-smi`: displays memory info.
 - `vmstat`: displays a more detailed view of memory info.
 
 #### Tip:  The up and down arrow keys can be used as shorthand for `screen -ls` and `process-smi`, respectively.
+
+## Files
+The following files are described below:
+- [`Source.cpp`](Source.cpp): Contains the main function thread, command recognition, and initialization functions.
+- [`ScreenFactory.h`](ScreenFactory.h): Contains the ScreenFactory class that represents processes in the simulation.
+- [`ScreenManager.h`](ScreenManager.h): Contains the ScreenManager class that handles the CPU scheduling and Core threads.
+- [`InputHandler.h`](InputHandler.h): Handles keyboard input and is called by the main thread to get the inputted command.
+- [`Memory.h`](Memory.h): Contains both memory allocator classes. Paging and Flat Memory.
+- [`Command.h`](Command.h): Contains the ENUM class holding the list of the valid commands.
+- [`backingStore.txt`](backingStore.txt): The simulated backing store that contains a list of all processes currently in the backing store, each process on its own line.
+- [`report.txt`](report.txt): File outputed by the system when running the `report-util` command.
+- [`output`](output): Folder containing files written to by each process.
+
